@@ -1,0 +1,13 @@
+# Telekom Security Linux OS Hardening
+# File generated during automated hardening with Ansible
+
+{% if disable_protocols %}
+{% for np in list_disable_protocols %}
+install {{np}} /bin/true
+{% endfor %}
+{% endif %}
+{% if disable_filesystems %}
+{% for fs in list_disable_filesystems %}
+install {{fs}} /bin/true
+{% endfor %}
+{% endif %}

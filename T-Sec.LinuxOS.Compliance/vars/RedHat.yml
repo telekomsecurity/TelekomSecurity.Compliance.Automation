@@ -1,0 +1,133 @@
+---
+
+# Don't change this file. Variables to change by the user are located
+# in file '/default/main.yml'!
+
+modprobe_package: 'module-init-tools'
+
+# ------ old --- old --- old --- old ------
+
+# Do not change groups wheel and sshd! Add only additional groups if
+# needed. Otherwise, you can't login afterwards!
+use_group_sudo: "wheel"
+use_group_ssh: "sshd"
+
+# Tool for updating grub after configuration change.
+grub_update_tool: "grub2-mkconfig -o /boot/grub2/grub.cfg"
+
+# -------------------
+# 01 System Hardening
+# -------------------
+
+# Req 2: The reachability of services must be restricted.
+iptables_tools: 'iptables-services'
+
+# Req 7: Unused software must not be installed or must be uninstalled.
+use_rsync_deamon: 'rsyncd'
+
+# ---------------------------------
+# 04 Authentication & Authorization
+# ---------------------------------
+
+# Req 20: User accounts must be used that allow unambiguous identification
+# of the user.
+use_uid_max: 999
+use_nologin_path: /sbin/nologin
+
+# Req 42: Permissions of security relevant configuration files must be
+# restricted.
+# File: /etc/passwd
+passwd_file: "/etc/passwd"
+passwd_owner: "root"
+passwd_group: "root"
+passwd_mode: "0644"
+
+# File: /etc/passwd-
+passwdm_file: "/etc/passwd-"
+passwdm_owner: "root"
+passwdm_group: "root"
+passwdm_mode: "0644"
+
+# File: /etc/shadow
+shadow_file: "/etc/shadow"
+shadow_owner: "root"
+shadow_group: "root"
+shadow_mode: "0000"
+
+# File: /etc/shadow-
+shadowm_file: "/etc/shadow-"
+shadowm_owner: "root"
+shadowm_group: "root"
+shadowm_mode: "0000"
+
+# File: /etc/gshadow
+gshadow_file: "/etc/gshadow"
+gshadow_owner: "root"
+gshadow_group: "root"
+gshadow_mode: "0000"
+
+# File: /etc/gshadow-
+gshadowm_file: "/etc/gshadow-"
+gshadowm_owner: "root"
+gshadowm_group: "root"
+gshadowm_mode: "0000"
+
+# File: /etc/group
+group_file: "/etc/group"
+group_owner: "root"
+group_group: "root"
+group_mode: "0644"
+
+# File: /etc/group-
+groupm_file: "/etc/group-"
+groupm_owner: "root"
+groupm_group: "root"
+groupm_mode: "0644"
+
+# File: /boot/grupb2/grub.cfg
+grub_file: "/boot/grub2/grub.cfg"
+grub_owner: "root"
+grub_group: "root"
+grub_mode: "0600"
+
+# Log files in /var/log
+logfile_mode: "o-wx"
+
+# File: /etc/sysctl.conf
+sysctl_file: "/etc/sysctl.conf"
+sysctl_owner: "root"
+sysctl_group: "root"
+sysctl_mode: "0640"
+
+# File: /etc/ssh/sshd_config
+sshd_conf_file: "/etc/ssh/sshd_config"
+sshd_conf_owner: "root"
+sshd_conf_group: "root"
+sshd_conf_mode: "og-rwx"
+
+# Req 43: If a system has Internet facing services or is a
+# virtualization host, a MAC solution must be used.
+use_mac_type: "selinux"
+use_mac_package: "libselinux"
+
+# Req 46: If SELinux is used, the policy must be configured.
+use_selinux_type: "targeted"
+
+# Req 49: If a password is used as an authentication attribute, it must have
+# at least 8 characters and contain three of the following categories:
+# upper cases, lower case, numbers and special characters.
+use_pam_pwquality: "libpwquality"
+
+# Req 51: Security relevant events must be logged with a precise timestamp
+# and a unique system reference.
+use_audit_deamon: "audit"
+
+# Req 54: System time must be synchronized against a reference time source.
+use_ntp_deamon: "ntpd"
+
+# --------------------
+# 06 System Management
+# --------------------
+
+# SSH
+sshd_service_name: ssh

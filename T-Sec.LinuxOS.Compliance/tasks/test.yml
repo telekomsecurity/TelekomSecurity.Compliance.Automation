@@ -1,0 +1,26 @@
+---
+
+- block:
+    - name: req-001.1 disable unused protocols
+      template:
+        src: 'modprobe.j2'
+        dest: '/etc/modprobe.d/t-sec.conf'
+        owner: root
+        group: root
+        mode: 0640
+      when: not ansible_check_mode
+    - name: req-001.1 check unused protocols
+      shell: lsmod | grep -o {{ item }} | sort -u | wc -l
+      register: loaded_protocols
+      failed_when: loaded_protocols.stdout != "0"
+      changed_when: false
+      check_mode: no
+      with_items:
+        - "{{ list_disable_protocols }}"
+      when: ansible_check_mode
+  rescue:
+    - debug:
+        msg: "FAILED: req-001 (1/1)"
+  when: disable_protocols
+
+# <tbd> Kernel Module entladen?

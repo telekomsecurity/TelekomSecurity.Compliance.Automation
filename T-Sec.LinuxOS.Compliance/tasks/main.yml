@@ -1,2 +1,12 @@
 ---
-# tasks file for linux-baseline.tsec
+
+- name: read variables for detected os
+  include_vars: "{{ item }}"
+  with_first_found:
+    - files:
+      - "{{ ansible_os_family }}.yml"
+      - "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+      - "{{ ansible_distribution }}.yml"
+      skip: true
+
+- import_tasks: test.yml

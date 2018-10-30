@@ -1,2 +1,11 @@
 ---
-# defaults file for linux-baseline.tsec
+
+# Needed TCP services that are used on system must be defined.
+used_tcp_services:
+  - "22"
+  # - ""
+
+# Needed UDP services that are used on system must be defined.
+used_udp_services:
+  - ""
+  # - ""

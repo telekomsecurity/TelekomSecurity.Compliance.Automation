@@ -2,5 +2,4 @@
 # Telekom Security <tbd>
 
 ## Author Information
-Author: [Telekom Security](https://security.telekom.com/)
-E-Mail: security.automation@telekom.de
+Author: [Telekom Security](https://security.telekom.com/) (security.automation@telekom.de)

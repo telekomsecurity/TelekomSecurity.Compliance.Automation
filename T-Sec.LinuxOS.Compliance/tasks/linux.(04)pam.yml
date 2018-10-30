@@ -1,0 +1,6 @@
+---
+
+# Req 44:	If PAM is used, an appropriate hashing function must be configured for password protection for PAM.
+# Req 45:	If PAM is used, password rules must be configured for PAM to force the use of passwords with a minimum length of 8 characters and a combination of three out of the following categories: upper cases, lower case, numbers and special characters.
+# Req 46:	If PAM is used, a protection against brute force and dictionary attacks that hinder pass-word guessing must be configured in PAM.
+# Req 47:	If PAM is used , PAM must be configured that motd did not contain any sensitive data.

@@ -1,2 +1,123 @@
 ---
-# vars file for linux-baseline.tsec
+
+# Req 1: Unused services and protocols must be deactivated.
+
+disable_protocols: true
+list_disable_protocols:
+  - "dccp"
+  - "sctp"
+  - "rds"
+  - "tipc"
+
+# Req 2: The reachability of services must be restricted.
+
+# Req 3: Unused software must not be installed or must be uninstalled.
+uninstall_servers: true
+list_uninstall_servers:
+  - "openbsd-inetd"
+  - "inetutils-inetd"
+  - "xinetd"
+  - "xserver-xorg-core*"
+  - "nfs-kernel-server"
+  - "rpcbind"
+  - "vsftpd"
+  - "ftpd"
+  - "dovecot-core"
+  - "dovecot-pop3d"
+  - "dovecot-imapd"
+  - "isc-dhcp-server*"
+  - "nis"
+  - "avahi-daemon"
+  - "cups"
+  - "snmpd"
+
+uninstall_clients: true
+list_uninstall_clients:
+  - "rsh-redone-client"
+  - "rsh-client"
+  - "talk"
+  - "telnet"
+  - "ldap-utils"
+
+# Req 4:	Unused filesystems must be disabled.
+
+disable_filesystems: true
+list_disable_filesystems:
+  - "cramfs"
+  - "freevxfs"
+  - "jffs2"
+  - "hfs"
+  - "hfsplus"
+  - "squashfs"
+  - "udf"
+  - "vfat"
+
+# Req 5:	Dedicated partitions must be used for growing content that can influence the availability of the system.
+# Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where this is applicable.
+
+# Req 7:	Automounting must be disabled.
+uninstall_autofs: true
+
+# Req 8: The use of at/cron must be restricted to authorized users.
+# Req 9: Sticky bit must be set on all world-writable directories.
+# Req 10: No regular files that are world writable must exist.
+# Req 11:	Passwords must be protected with an appropriate hashing function.
+# Req 12: The default user umask must be 027 or more restrictive.
+# Req 13:	Not needed SUID and SGID bits must be removed from executables.
+# Req 14:	Core dumps must be disabled.
+# Req 15:	Protection against buffer overflows must be enabled.
+# Req 16:	Prelink must not be used.
+# Req 17:	IPv4 protocol stack must be securely configured.
+# Req 18:	IPv6 protocol stack must be securely configured.
+# Req 19:	Emerged vulnerabilities in software and hardware of a system must be fixed or protected against misuse.
+# Req 20: GPG check for repository server must be activated and corresponding keys for trustable repositories must be configured.
+# Req 21:	User accounts must be used that allow unambiguous identification of the user.
+# Req 22:	System accounts must be non-login.
+# Req 23:	User accounts must be protected against unauthorized usage by at least one authentication attribute.
+# Req 24:	User accounts with extensive rights must be protected with two authentication attributes.
+# Req 25:	The system must be connected to a central system for user administration.
+# Req 26:	Authentication must be used for single user mode.
+# Req 27: The management of the operating system must be done via a dedicated management network which is independent from the production network.
+# Req 28:	Management services must be bound to the management network.
+# Req 29: Encrypted protocols must be used for management access to administrate the operating system.
+# Req 30:	Logging must be enabled in bootloader configuration.
+# Req 31:	Log rotation for logfiles must be configured.
+# Req 32:	System time must be synchronized against a reference time source.
+# Req 33:	Auditd service must be used to log security relevant events.
+# Req 34:	System events must be logged.
+# Req 35:	Access and Authentication events must be logged.
+# Req 36:	Account and Group Management events must be logged.
+# Req 37:	Configuration Change events must be logged.
+# Req 38:	Auditd configuration must be immutable.
+# Req 39:	Security relevant logging data must be send to an external system direct after their creation.
+# Req 40:	If RSyslog is used, the default permission of 640 or more restrictive for logfiles must be configured.
+# Req 41:	If RSyslog is used, at least one central logging server must be configured.
+# Req 42:	If Syslog-NG is used, the default permission of 640 or more restrictive for logfiles must be configured.
+# Req 43:	If Syslog-NG is used, at least one central logging server must be configured.
+# Req 44:	If PAM is used, an appropriate hashing function must be configured for password protection for PAM.
+# Req 45:	If PAM is used, password rules must be configured for PAM to force the use of passwords with a minimum length of 8 characters and a combination of three out of the following categories: upper cases, lower case, numbers and special characters.
+# Req 46:	If PAM is used, a protection against brute force and dictionary attacks that hinder pass-word guessing must be configured in PAM.
+# Req 47:	If PAM is used , PAM must be configured that motd did not contain any sensitive data.
+# Req 48:	If iptables is used, policies for loopback traffic must be configured.
+# Req 49:	If iptables is used, policies for outbound and established connections must be configured.
+# Req 50:	If iptables is used, policies must exist for all ports in listening state.
+# Req 51:	If iptables is used, the default policy must be configured to drop all traffic.
+# Req 52:	If a system has Internet facing services or is a virtualization host, a MAC solution must be used.
+# Req 53:	If SELinux is used, it must not be disabled in bootloader configuration.
+# Req 54:	If SELinux is used, its state must be enforced.
+# Req 55:	If SELinux is used, the policy must be configured.
+# Req 56:	If SELinux is used, SETroubleshoot and MCS Translation Service must not be installed.
+# Req 57:	If SELinux is used, events must be logged if configuration of SELinux is modified.
+# Req 58:	If AppArmor is used, it must not be disabled in bootloader configuration.
+# Req 59:	AppArmor is used, its state must be enforced.
+# Req 60:	If AppArmor is used, events must be logged if configuration of AppArmor is modified.
+# Req 61:	No legacy + entries must exist in files passwd, shadows and group.
+# Req 62	A user's home directory must be owned by the user and have mode 750 or more restric-tive.
+# Req 63:	Default group for the root account must be GID 0.
+# Req 64:	Root must be the only UID 0 account.
+# Req 65:	All groups in /etc/passwd must exist in /etc/group.
+# Req 66:	No duplicate UIDs and GIDs must exist.
+# Req 67:	No duplicate user and group names must exist.
+# Req 68: The shadow group must be empty (only Ubuntu Linux).
+# Req 69: No files and directories without assigned user or group must exist.
+# Req 70:	Permissions of security relevant configuration files must have the distribution default values or more restrictive.
