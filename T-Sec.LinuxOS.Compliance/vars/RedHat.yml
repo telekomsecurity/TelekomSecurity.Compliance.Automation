@@ -12,6 +12,7 @@
 # ========================================================================
 
 modprobe_package: 'module-init-tools'
+use_rsync_deamon: 'rsyncd'
 
 # ------ old --- old --- old --- old ------
 
@@ -30,8 +31,6 @@ grub_update_tool: "grub2-mkconfig -o /boot/grub2/grub.cfg"
 # Req 2: The reachability of services must be restricted.
 iptables_tools: 'iptables-services'
 
-# Req 7: Unused software must not be installed or must be uninstalled.
-use_rsync_deamon: 'rsyncd'
 
 # ---------------------------------
 # 04 Authentication & Authorization

@@ -1,8 +1,38 @@
 ---
 
+  # <tbd> Muss noch getestet werden!
+
+- name: req-001.0 disable rpcbind (14.04)
+    shell: update-rc.d -f rpcbind remove
+    changed_when: false
+  when: not ansible_check_mode and
+       ( disable_rpcbind and ansible_distribution_version = "14.04" )
+
+- name: req-001.0 disable rpcbind (not 14.04)
+  systemd:
+    name: rpcbind
+    state: stopped
+    enabled: no
+  when: not ansible_check_mode and
+       ( disable_rpcbind and ansible_distribution_version != "14.04" )
+
+- name: req-001.0 disable rsync (14.04)
+    shell: update-rc.d -f "{{ use_rsync_deamon }}" remove
+    changed_when: false
+  when: not ansible_check_mode and
+       ( disable_rsync and ansible_distribution_version = "14.04" )
+
+- name: req-001.0 disable rsync service (not 14.04)
+  systemd:
+    name: "{{ use_rsync_deamon }}"
+    state: stopped
+    enabled: no
+  when: not ansible_check_mode and
+       ( disable_rsync and ansible_distribution_version != "14.04" )
+
 - block:
     - name: req-001.1 check for open tcp ports
-      shell: ss -ntl 2>/dev/null | grep -i 'listen' | awk '{print $4}' | sed 's/.*://' | sort -nu
+      shell: ss -nlt 2>/dev/null | awk '($1 == "LISTEN" && $4 !~ /127.0.0.1:./ && $4 !~ /::1:./) {print $4}' | sed 's/.*://' | sort -nu
       register: open_tcp_ports
       changed_when: false
       check_mode: no
@@ -16,12 +46,12 @@
       when: count_tcp != "0"
   rescue:
      - debug:
-         msg: "WARNING: FAILED: req-001 (2/3)"
+         msg: "FAILED: req-001 (1/2)"
   when: ansible_check_mode
 
 - block:
     - name: req-001.2 check for open UDP ports
-      shell: ss -nlu 2>/dev/null | grep -i 'listen\|unconn' | awk '{print $4}' | sed 's/.*://' | sort -nu
+      shell: ss -nlu 2>/dev/null | awk '($1 == "UNCONN" && $4 !~ /127.0.0.1:./ && $4 !~ /::1:./) {print $4}' | sed 's/.*://' | sort -nu
       register: open_udp_ports
       changed_when: false
       check_mode: no
@@ -35,8 +65,5 @@
       when: count_udp != "0"
   rescue:
      - debug:
-         msg: "WARNING: FAILED: req-001 (3/3)"
+         msg: "FAILED: req-001 (2/2)"
   when: ansible_check_mode
-
-
-# <tbd> Für die fertigen Anforderungen die Bash-Befehle ausarbeiten!

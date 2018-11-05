@@ -12,7 +12,8 @@
 # ========================================================================
 
 # Req 1: Unused services and protocols must be deactivated.
-# Compliance check only.
+disable_rpcbind: true
+disable_rsync: true
 
 # Req 2: The reachability of services must be restricted.
 # Compliance check only.

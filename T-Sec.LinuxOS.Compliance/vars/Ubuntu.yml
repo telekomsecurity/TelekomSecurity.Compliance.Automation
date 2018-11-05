@@ -12,6 +12,7 @@
 # ========================================================================
 
 modprobe_package: 'kmod'
+use_rsync_deamon: 'rsync'
 
 # ------ old --- old --- old --- old ------
 
@@ -34,8 +35,6 @@ grub_update_tool: "update-grub"
 # Req 2: The reachability of services must be restricted.
 iptables_tools: 'iptables-persistent'
 
-# Req 7: Unused software must not be installed or must be uninstalled.
-use_rsync_deamon: 'rsync'
 
 # ---------------------------------
 # 04 Authentication & Authorization

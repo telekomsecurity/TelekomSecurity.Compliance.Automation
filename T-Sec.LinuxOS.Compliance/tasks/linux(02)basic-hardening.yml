@@ -9,7 +9,14 @@
 # Req 1: Unused services and protocols must be deactivated.
 
 #<tbd> rsync deaktivieren
-#<tbd> handle setzen um am ende dir offenen ports zu prüfen
+
+
+#<tbd>
+# rpcbind (port 111 tcp & udp) bei RedHat
+# rpcinfo -p (zeigt alle rpc services an; wenn nur portmapper
+# dann ist kein anderer RPC service aktiv und 111 wird nicht gebraucht)
+# Ausschalten: service rpcbind stop
+# und deaktivieren: systemctl disable rpcbind
 
 # <tbd>
 #- name: req-007.5 check for rsync file - ubuntu
@@ -49,7 +56,7 @@
       failed_when: check_servers.changed and ansible_check_mode
   rescue:
       - debug:
-          msg: "FAILED: req-003 (1/3)"
+          msg: "FAILED: req-003 (1/2)"
   when: uninstall_servers
 
 - block:
@@ -62,7 +69,7 @@
       failed_when: check_clients.changed and ansible_check_mode
   rescue:
     - debug:
-        msg: "FAILED: req-003 (2/3)"
+        msg: "FAILED: req-003 (2/2)"
   when: uninstall_clients
 
 # Req 4:	Unused filesystems must be disabled.
