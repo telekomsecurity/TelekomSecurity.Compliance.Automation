@@ -1,0 +1,161 @@
+---
+
+# ------------------------------------------------------------------------
+# Telekom Security - Compliance Automation
+# Linux OS for Servers (3.65)
+# Tasks: 01 Basic Hardening
+# ------------------------------------------------------------------------
+
+# Req 1: Unused services and protocols must be deactivated.
+
+#<tbd> rsync deaktivieren
+#<tbd> handle setzen um am ende dir offenen ports zu prüfen
+
+# <tbd>
+#- name: req-007.5 check for rsync file - ubuntu
+#  stat:
+#    path: /etc/default/rsync
+#  register: rsync_file
+#  when: config_disable_rsync == true
+
+#- name: req-007.6 disable rsync service - ubuntu
+#  lineinfile:
+#    dest: '/etc/default/rsync'
+#    regexp: '^RSYNC_ENABLE'
+#    line: 'RSYNC_ENABLE=false'
+#  when: rsync_file.stat.exists == true
+
+#- name: req-007.7 disable rsync service
+#  systemd:
+#    name: "{{ use_rsync_deamon }}"
+#    state: stopped
+#    enabled: no
+#  when: config_disable_rsync == true and ansible_distribution_version != "14.04"
+
+
+# Req 2: The reachability of services must be restricted.
+#<tbd> handler setzen um am ende zu prüfen ob ssh eingeschränkt ist und/oder
+# ip tables installiert ist.
+
+# Req 3: Unused software must not be installed or must be uninstalled.
+
+- block:
+    - name: req-003.1 uninstall servers
+      package:
+        name: '{{ item }}'
+        state: absent
+      with_items: '{{ list_uninstall_servers }}'
+      register: check_servers
+      failed_when: check_servers.changed and ansible_check_mode
+  rescue:
+      - debug:
+          msg: "FAILED: req-003 (1/3)"
+  when: uninstall_servers
+
+- block:
+    - name: req-003.2 uninstall clients
+      package:
+        name: '{{ item }}'
+        state: absent
+      with_items: '{{ list_uninstall_clients }}'
+      register: check_clients
+      failed_when: check_clients.changed and ansible_check_mode
+  rescue:
+    - debug:
+        msg: "FAILED: req-003 (2/3)"
+  when: uninstall_clients
+
+# Req 4:	Unused filesystems must be disabled.
+
+- name: install modprobe
+  package:
+    name: '{{ modprobe_package }}'
+    state: present
+  when: disable_filesystems
+
+# Req 5:	Dedicated partitions must be used for growing content that can influence the availability of the system.
+# <tbd>
+
+# Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where this is applicable.
+# <tbd>
+
+# Req 7:	Automounting must be disabled.
+
+- block:
+    - name: req-007.1 uninstall autofs
+      package:
+        name: 'autofs'
+        state: absent
+      register: check_autofs
+      failed_when: check_autofs.changed and ansible_check_mode
+  rescue:
+    - debug:
+        msg: "FAILED: req-007 (1/1)"
+  when: uninstall_autofs
+
+
+# Req 8: The use of at/cron must be restricted to authorized users.
+# <tbd>
+
+# Req 9: Sticky bit must be set on all world-writable directories.
+# <tbd>
+
+# Req 10: No regular files that are world writable must exist.
+# <tbd>
+
+# Req 11:	Passwords must be protected with an appropriate hashing function.
+# <tbd>
+
+# Req 12: The default user umask must be 027 or more restrictive.
+# <tbd>
+
+# Req 13:	Not needed SUID and SGID bits must be removed from executables.
+# <tbd>
+
+# Req 14:	Core dumps must be disabled.
+# <tbd>
+
+# Req 15:	Protection against buffer overflows must be enabled.
+# <tbd>
+
+# Req 16:	Prelink must not be used.
+# <tbd>
+
+# Req 17:	IPv4 protocol stack must be securely configured.
+# <tbd>
+
+# Req 18:	IPv6 protocol stack must be securely configured.
+# <tbd>
+
+# Req 19:	Emerged vulnerabilities in software and hardware of a system must be fixed or protected against misuse.
+# <tbd>
+
+# Req 20: GPG check for repository server must be activated and corresponding keys for trustable repositories must be configured.
+# <tbd>
+
+# Req 21:	User accounts must be used that allow unambiguous identification of the user.
+# <tbd>
+
+# Req 22:	System accounts must be non-login.
+# <tbd>
+
+# Req 23:	User accounts must be protected against unauthorized usage by at least one authentication attribute.
+# <tbd>
+
+# Req 24:	User accounts with extensive rights must be protected with two authentication attributes.
+# <tbd>
+
+# Req 25:	The system must be connected to a central system for user administration.
+# <tbd>
+
+# Req 26:	Authentication must be used for single user mode.
+# <tbd>
+
+# Req 27: The management of the operating system must be done via a dedicated management network which is independent from the production network.
+# <tbd>
+
+# Req 28:	Management services must be bound to the management network.
+# <tbd>
+
+# Req 29: Encrypted protocols must be used for management access to administrate the operating system.
+# <tbd>

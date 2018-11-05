@@ -1,15 +1,21 @@
 ---
 
-# Req 1: Unused services and protocols must be deactivated.
+# ------------------------------------------------------------------------
+# Telekom Security - Compliance Automation
+# Linux OS for Servers (3.65)
+# Variables
+# ------------------------------------------------------------------------
 
-disable_protocols: true
-list_disable_protocols:
-  - "dccp"
-  - "sctp"
-  - "rds"
-  - "tipc"
+# ========================================================================
+# Don't change this file. Variables to change by the user are located
+# in file '/default/main.yml'!
+# ========================================================================
+
+# Req 1: Unused services and protocols must be deactivated.
+# Compliance check only.
 
 # Req 2: The reachability of services must be restricted.
+# Compliance check only.
 
 # Req 3: Unused software must not be installed or must be uninstalled.
 uninstall_servers: true

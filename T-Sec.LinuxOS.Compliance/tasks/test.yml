@@ -1,26 +1,42 @@
 ---
 
 - block:
-    - name: req-001.1 disable unused protocols
-      template:
-        src: 'modprobe.j2'
-        dest: '/etc/modprobe.d/t-sec.conf'
-        owner: root
-        group: root
-        mode: 0640
-      when: not ansible_check_mode
-    - name: req-001.1 check unused protocols
-      shell: lsmod | grep -o {{ item }} | sort -u | wc -l
-      register: loaded_protocols
-      failed_when: loaded_protocols.stdout != "0"
+    - name: req-001.1 check for open tcp ports
+      shell: ss -ntl 2>/dev/null | grep -i 'listen' | awk '{print $4}' | sed 's/.*://' | sort -nu
+      register: open_tcp_ports
       changed_when: false
       check_mode: no
-      with_items:
-        - "{{ list_disable_protocols }}"
-      when: ansible_check_mode
+    - set_fact:
+        check_tcp: '{{ open_tcp_ports.stdout_lines | difference(used_tcp_services) }}'
+    - set_fact: count_tcp=0
+    - set_fact: count_tcp={{ count_tcp | int + 1 }}
+      with_items: "{{ check_tcp }}"
+    - fail:
+        msg: "Found {{ count_tcp }} open TCP ports!"
+      when: count_tcp != "0"
   rescue:
-    - debug:
-        msg: "FAILED: req-001 (1/1)"
-  when: disable_protocols
+     - debug:
+         msg: "WARNING: FAILED: req-001 (2/3)"
+  when: ansible_check_mode
 
-# <tbd> Kernel Module entladen?
+- block:
+    - name: req-001.2 check for open UDP ports
+      shell: ss -nlu 2>/dev/null | grep -i 'listen\|unconn' | awk '{print $4}' | sed 's/.*://' | sort -nu
+      register: open_udp_ports
+      changed_when: false
+      check_mode: no
+    - set_fact:
+        check_udp: '{{ open_udp_ports.stdout_lines | difference(used_udp_services) }}'
+    - set_fact: count_udp=0
+    - set_fact: count_udp={{ count_udp | int + 1 }}
+      with_items: "{{ check_udp }}"
+    - fail:
+        msg: "Found {{ count_udp }} open UDP ports!"
+      when: count_udp != "0"
+  rescue:
+     - debug:
+         msg: "WARNING: FAILED: req-001 (3/3)"
+  when: ansible_check_mode
+
+
+# <tbd> Für die fertigen Anforderungen die Bash-Befehle ausarbeiten!

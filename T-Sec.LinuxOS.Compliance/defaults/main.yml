@@ -1,5 +1,11 @@
 ---
 
+# ------------------------------------------------------------------------
+# Telekom Security - Compliance Automation
+# Linux OS for Servers (3.65)
+# Default Variables
+# ------------------------------------------------------------------------
+
 # Needed TCP services that are used on system must be defined.
 used_tcp_services:
   - "22"
@@ -7,5 +13,5 @@ used_tcp_services:
 
 # Needed UDP services that are used on system must be defined.
 used_udp_services:
-  - ""
+  - "68" # Needed for DHCP client
   # - ""
