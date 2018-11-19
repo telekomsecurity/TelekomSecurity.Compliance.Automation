@@ -8,37 +8,89 @@
 
 # Req 1: Unused services and protocols must be deactivated.
 
-#<tbd> rsync deaktivieren
+- name: req-001.0 stop rpcbind (14.04)
+  service:
+    name: rpcbind
+    state: stopped
+  when: not ansible_check_mode and
+       ( disable_rpcbind and ansible_distribution_version == "14.04" )
 
+- name: req-001.0 disable rpcbind (14.04)
+  shell: update-rc.d -f rpcbind remove
+  register: rpcbind_result
+  changed_when: "'Removing' in rpcbind_result.stdout"
+  failed_when: "'Removing' not in rpcbind_result.stdout"
+  when: not ansible_check_mode and
+       ( disable_rpcbind and ansible_distribution_version == "14.04" )
 
-#<tbd>
-# rpcbind (port 111 tcp & udp) bei RedHat
-# rpcinfo -p (zeigt alle rpc services an; wenn nur portmapper
-# dann ist kein anderer RPC service aktiv und 111 wird nicht gebraucht)
-# Ausschalten: service rpcbind stop
-# und deaktivieren: systemctl disable rpcbind
+- name: req-001.0 disable rpcbind (CentOS)
+  systemd:
+    name: rpcbind
+    state: stopped
+    enabled: no
+  when: not ansible_check_mode and
+       ( disable_rpcbind and ansible_distribution == "CentOS" )
 
-# <tbd>
-#- name: req-007.5 check for rsync file - ubuntu
-#  stat:
-#    path: /etc/default/rsync
-#  register: rsync_file
-#  when: config_disable_rsync == true
+- name: req-001.0 stop rsync (14.04)
+  service:
+    name: "{{ use_rsync_deamon }}"
+    state: stopped
+  when: not ansible_check_mode and
+       ( disable_rpcbind and ansible_distribution_version == "14.04" )
 
-#- name: req-007.6 disable rsync service - ubuntu
-#  lineinfile:
-#    dest: '/etc/default/rsync'
-#    regexp: '^RSYNC_ENABLE'
-#    line: 'RSYNC_ENABLE=false'
-#  when: rsync_file.stat.exists == true
+- name: req-001.0 disable rsync (14.04)
+  shell: update-rc.d -f "{{ use_rsync_deamon }}" remove
+  register: rsync_result
+  changed_when: "'Removing' in rsync_result.stdout"
+  failed_when: "'Removing' not in rsync_result.stdout"
+  when: not ansible_check_mode and
+       ( disable_rsync and ansible_distribution_version == "14.04" )
 
-#- name: req-007.7 disable rsync service
-#  systemd:
-#    name: "{{ use_rsync_deamon }}"
-#    state: stopped
-#    enabled: no
-#  when: config_disable_rsync == true and ansible_distribution_version != "14.04"
+- name: req-001.0 disable rsync service (not 14.04)
+  systemd:
+    name: "{{ use_rsync_deamon }}"
+    state: stopped
+    enabled: no
+  when: not ansible_check_mode and
+       ( disable_rsync and ansible_distribution_version != "14.04" )
 
+- block:
+    - name: req-001.1 check for open tcp ports
+      shell: ss -nlt 2>/dev/null | awk '($1 == "LISTEN" && $4 !~ /127.0.0.*.:./ && $4 !~ /::*.:./) {print $4}' | sed 's/.*://' | sort -nu
+      register: open_tcp_ports
+      changed_when: false
+      check_mode: no
+    - set_fact:
+        check_tcp: '{{ open_tcp_ports.stdout_lines | difference(used_tcp_services) }}'
+    - set_fact: count_tcp=0
+    - set_fact: count_tcp={{ count_tcp | int + 1 }}
+      with_items: "{{ check_tcp }}"
+    - fail:
+        msg: "Found {{ count_tcp }} open TCP ports!"
+      when: count_tcp != "0"
+  rescue:
+     - debug:
+         msg: "FAILED: req-001 (1/2)"
+  when: ansible_check_mode
+
+- block:
+    - name: req-001.2 check for open UDP ports
+      shell: ss -nlu 2>/dev/null | awk '($1 == "UNCONN" && $4 !~ /127.0.0.*.:./ && $4 !~ /::*.:./) {print $4}' | sed 's/.*://' | sort -nu
+      register: open_udp_ports
+      changed_when: false
+      check_mode: no
+    - set_fact:
+        check_udp: '{{ open_udp_ports.stdout_lines | difference(used_udp_services) }}'
+    - set_fact: count_udp=0
+    - set_fact: count_udp={{ count_udp | int + 1 }}
+      with_items: "{{ check_udp }}"
+    - fail:
+        msg: "Found {{ count_udp }} open UDP ports!"
+      when: count_udp != "0"
+  rescue:
+     - debug:
+         msg: "FAILED: req-001 (2/2)"
+  when: ansible_check_mode
 
 # Req 2: The reachability of services must be restricted.
 #<tbd> handler setzen um am ende zu prüfen ob ssh eingeschränkt ist und/oder

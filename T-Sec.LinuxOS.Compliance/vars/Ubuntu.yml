@@ -1,14 +1,14 @@
 ---
-
 # ------------------------------------------------------------------------
 # Telekom Security - Compliance Automation
 # Linux OS for Servers (3.65)
 # Specific Variables for Ubuntu Linux
 # ------------------------------------------------------------------------
 
-# ========================================================================
-# Don't change this file. Variables to change by the user are located
-# in file '/default/main.yml'!
+# =IMPORTANT==============================================================
+#
+#  Note: Changing variables in this file could affect security compliance!
+#
 # ========================================================================
 
 modprobe_package: 'kmod'

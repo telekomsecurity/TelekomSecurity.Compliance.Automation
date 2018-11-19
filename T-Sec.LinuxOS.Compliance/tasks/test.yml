@@ -1,69 +1,36 @@
 ---
 
-  # <tbd> Muss noch getestet werden!
-
-- name: req-001.0 disable rpcbind (14.04)
-    shell: update-rc.d -f rpcbind remove
-    changed_when: false
-  when: not ansible_check_mode and
-       ( disable_rpcbind and ansible_distribution_version = "14.04" )
-
-- name: req-001.0 disable rpcbind (not 14.04)
-  systemd:
-    name: rpcbind
-    state: stopped
-    enabled: no
-  when: not ansible_check_mode and
-       ( disable_rpcbind and ansible_distribution_version != "14.04" )
-
-- name: req-001.0 disable rsync (14.04)
-    shell: update-rc.d -f "{{ use_rsync_deamon }}" remove
-    changed_when: false
-  when: not ansible_check_mode and
-       ( disable_rsync and ansible_distribution_version = "14.04" )
-
-- name: req-001.0 disable rsync service (not 14.04)
-  systemd:
-    name: "{{ use_rsync_deamon }}"
-    state: stopped
-    enabled: no
-  when: not ansible_check_mode and
-       ( disable_rsync and ansible_distribution_version != "14.04" )
+- debug:
+    msg: OS Family "{{ ansible_os_family }}"
+- debug:
+    msg: Distro "{{ ansible_distribution }}"
+- debug:
+    msg: Distro Version "{{ ansible_distribution_version }}"
+- debug:
+    msg: Distro Major Version "{{ ansible_distribution_major_version }}"
 
 - block:
-    - name: req-001.1 check for open tcp ports
-      shell: ss -nlt 2>/dev/null | awk '($1 == "LISTEN" && $4 !~ /127.0.0.1:./ && $4 !~ /::1:./) {print $4}' | sed 's/.*://' | sort -nu
-      register: open_tcp_ports
-      changed_when: false
-      check_mode: no
-    - set_fact:
-        check_tcp: '{{ open_tcp_ports.stdout_lines | difference(used_tcp_services) }}'
-    - set_fact: count_tcp=0
-    - set_fact: count_tcp={{ count_tcp | int + 1 }}
-      with_items: "{{ check_tcp }}"
-    - fail:
-        msg: "Found {{ count_tcp }} open TCP ports!"
-      when: count_tcp != "0"
+    - name: req-003.1 uninstall servers
+      package:
+        name: '{{ item }}'
+        state: absent
+      with_items: '{{ list_uninstall_servers }}'
+      register: check_servers
+      failed_when: check_servers.changed and ansible_check_mode
   rescue:
-     - debug:
-         msg: "FAILED: req-001 (1/2)"
-  when: ansible_check_mode
+      - debug:
+          msg: "FAILED: req-003 (1/2)"
+  when: uninstall_servers
 
 - block:
-    - name: req-001.2 check for open UDP ports
-      shell: ss -nlu 2>/dev/null | awk '($1 == "UNCONN" && $4 !~ /127.0.0.1:./ && $4 !~ /::1:./) {print $4}' | sed 's/.*://' | sort -nu
-      register: open_udp_ports
-      changed_when: false
-      check_mode: no
-    - set_fact:
-        check_udp: '{{ open_udp_ports.stdout_lines | difference(used_udp_services) }}'
-    - set_fact: count_udp=0
-    - set_fact: count_udp={{ count_udp | int + 1 }}
-      with_items: "{{ check_udp }}"
-    - fail:
-        msg: "Found {{ count_udp }} open UDP ports!"
-      when: count_udp != "0"
+    - name: req-003.2 uninstall clients
+      package:
+        name: '{{ item }}'
+        state: absent
+      with_items: '{{ list_uninstall_clients }}'
+      register: check_clients
+      failed_when: check_clients.changed and ansible_check_mode
   rescue:
-     - debug:
-         msg: "FAILED: req-001 (2/2)"
-  when: ansible_check_mode
+    - debug:
+        msg: "FAILED: req-003 (2/2)"
+  when: uninstall_clients

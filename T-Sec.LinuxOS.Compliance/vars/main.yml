@@ -1,14 +1,14 @@
 ---
-
 # ------------------------------------------------------------------------
 # Telekom Security - Compliance Automation
 # Linux OS for Servers (3.65)
 # Variables
 # ------------------------------------------------------------------------
 
-# ========================================================================
-# Don't change this file. Variables to change by the user are located
-# in file '/default/main.yml'!
+# =IMPORTANT==============================================================
+#
+#  Note: Changing variables in this file could affect security compliance!
+#
 # ========================================================================
 
 # Req 1: Unused services and protocols must be deactivated.
@@ -26,7 +26,6 @@ list_uninstall_servers:
   - "xinetd"
   - "xserver-xorg-core*"
   - "nfs-kernel-server"
-  - "rpcbind"
   - "vsftpd"
   - "ftpd"
   - "dovecot-core"
