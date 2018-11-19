@@ -48,7 +48,7 @@ list_uninstall_clients:
 # Req 4:	Unused filesystems must be disabled.
 
 disable_filesystems: true
-list_disable_filesystems:
+list_filesystems:
   - "cramfs"
   - "freevxfs"
   - "jffs2"
@@ -59,14 +59,22 @@ list_disable_filesystems:
   - "vfat"
 
 # Req 5:	Dedicated partitions must be used for growing content that can influence the availability of the system.
+
+
 # Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where this is applicable.
+# <tbd> Anpassen?
+config_partition_options: true
+use_partition_options: "defaults,nosuid,nodev,noexec"
 
 # Req 7:	Automounting must be disabled.
 uninstall_autofs: true
 
 # Req 8: The use of at/cron must be restricted to authorized users.
+
 # Req 9: Sticky bit must be set on all world-writable directories.
+
 # Req 10: No regular files that are world writable must exist.
+
 # Req 11:	Passwords must be protected with an appropriate hashing function.
 # Req 12: The default user umask must be 027 or more restrictive.
 # Req 13:	Not needed SUID and SGID bits must be removed from executables.

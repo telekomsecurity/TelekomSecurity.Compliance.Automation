@@ -3,7 +3,7 @@
 
 {% endif %}
 {% if disable_filesystems %}
-{% for fs in list_disable_filesystems %}
+{% for fs in list_filesystems %}
 install {{fs}} /bin/true
 {% endfor %}
 {% endif %}
