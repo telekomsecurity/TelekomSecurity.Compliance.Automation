@@ -125,8 +125,6 @@
 
 # Req 4:	Unused filesystems must be disabled.
 
-### <tbd> Nicht getestet!!!
-
 - name: req-004.0 install modprobe
   package:
     name: '{{ modprobe_package }}'
@@ -145,9 +143,9 @@
 - block:
     - name: req-004.1 check for modprobe file
       stat:
-        path: '/etc/modprobe.disable.conf'
-        register: check_modp_status
-        failed_when: check_modp_status.stat.exists == false
+        path: '/etc/modprobe.d/disable.conf'
+      register: check_file
+      failed_when: check_file.stat.exists == false
     - name: req-004.1 check modprobe file for unused filesystems
       lineinfile:
         path: '/etc/modprobe.d/disable.conf'
@@ -156,218 +154,226 @@
       register: check_modprobe
       failed_when: (check_modprobe is changed)
       with_items: "{{ list_filesystems }}"
-      when: check_modp_status.stat.exists
+      when: check_file.stat.exists
   rescue:
     - debug:
         msg: "FAILED: req-004 (1/2)"
   when: disable_filesystems and ansible_check_mode
 
 - block:
-    - name: req-004.2 search for loaded modules for filesystems
-      shell: lsmod | grep -o {{ item }} | sort -u | wc -l
-      register: loaded_mods_protocols
-      failed_when: loaded_mods_protocols.stdout != "0"
-      changed_when: false
-      check_mode: no
-      with_items:
-        - "{{ list_filesystems }}"
+  - name: Add the 802.1q module
+    modprobe:
+      name: '{{ item }}'
+      state: absent
+    register: check_modules
+    failed_when: (check_modules is changed and ansible_check_mode)
+    with_items:
+      - "{{ list_filesystems }}"
   rescue:
     - debug:
         msg: "FAILED: req-004 (2/2)"
-  when: disable_filesystems and ansible_check_mode
+  when: disable_filesystems
 
 # Req 5:	Dedicated partitions must be used for growing content that can influence the availability of the system.
 # <tbd> Noch anpassen und testen!
 
-- block:
-    - name: req-009.1 check if partition /tmp exists
-      lineinfile:
-        path: '/etc/fstab'
-        line: "/tmp "
-        state: present
-      register: check_tmp
-      failed_when: (check_tmp is changed)
-  rescue:
-    - debug:
-        msg: "WARNING: Partition /tmp is missing!"
+# /tmp
+# /var
 
-- block:
-    - name: req-009.2 check if partition /var exists
-      lineinfile:
-        path: '/etc/fstab'
-        line: "/var "
-        state: present
-      register: check_var
-      failed_when: (check_var is changed)
-  rescue:
-    - debug:
-        msg: "WARNING: Partition for /var is missing!"
-  when: config_partition_var_tmp == false or config_partition_var_log == false
+# /var/log; /var/tmp (instead of /var)
+# /home
 
-- block:
-    - name: req-009.3 check if partition /var/tmp exists
-      lineinfile:
-        path: '/etc/fstab'
-        line: "/var/tmp "
-        state: present
-      register: check_var_tmp
-      failed_when: (check_var_tmp is changed)
-  rescue:
-    - debug:
-        msg: "WARNING: Partition for /var/tmp is missing!"
-  when: config_partition_var == false
+#- block:
+#    - name: req-009.1 check if partition /tmp exists
+#      lineinfile:
+#        path: '/etc/fstab'
+#        line: "/tmp "
+#        state: present
+#      register: check_tmp
+#      failed_when: (check_tmp is changed)
+#  rescue:
+#    - debug:
+#        msg: "WARNING: Partition /tmp is missing!"
 
-- block:
-    - name: req-009.4 check if partition /var/log exists
-      lineinfile:
-        path: '/etc/fstab'
-        line: "/var/log "
-        state: present
-      register: check_var_log
-      failed_when: (check_var_log is changed)
-  rescue:
-    - debug:
-        msg: "WARNING: Partition for /var/log is missing!"
-  when: config_partition_var == false
+#- block:
+#    - name: req-009.2 check if partition /var exists
+#      lineinfile:
+#        path: '/etc/fstab'
+#        line: "/var "
+#        state: present
+#      register: check_var
+#      failed_when: (check_var is changed)
+#  rescue:
+#    - debug:
+#        msg: "WARNING: Partition for /var is missing!"
+#  when: config_partition_var_tmp == false or config_partition_var_log == false
 
-- block:
-    - name: req-009.5 check if partition /home exists
-      lineinfile:
-        path: '/etc/fstab'
-        line: "/home "
-        state: present
-      register: check_home
-      failed_when: (check_home is changed)
-  rescue:
-    - debug:
-        msg: "WARNING: Partition for /home is missing!"
-  when: config_partition_home == true
+#- block:
+#    - name: req-009.3 check if partition /var/tmp exists
+#      lineinfile:
+#        path: '/etc/fstab'
+#        line: "/var/tmp "
+#        state: present
+#      register: check_var_tmp
+#      failed_when: (check_var_tmp is changed)
+#  rescue:
+#    - debug:
+#        msg: "WARNING: Partition for /var/tmp is missing!"
+#  when: config_partition_var == false
+#
+#- block:
+#    - name: req-009.4 check if partition /var/log exists
+#      lineinfile:
+#        path: '/etc/fstab'
+#        line: "/var/log "
+#        state: present
+#      register: check_var_log
+#      failed_when: (check_var_log is changed)
+#  rescue:
+#    - debug:
+#        msg: "WARNING: Partition for /var/log is missing!"
+#  when: config_partition_var == false
+#
+#- block:
+#    - name: req-009.5 check if partition /home exists
+#      lineinfile:
+#        path: '/etc/fstab'
+#        line: "/home "
+#        state: present
+#      register: check_home
+#      failed_when: (check_home is changed)
+#  rescue:
+#    - debug:
+#        msg: "WARNING: Partition for /home is missing!"
+#  when: config_partition_home == true
 
 # Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where this is applicable.
-# <tbd> Noch anpassen und testen - Wichtig achte auf die Anforderung!
+# <tbd> Noch anpassen und testen
 
-- name: req-010.1 set options for partition /tmp
-  lineinfile:
-    path: '/etc/fstab'
-    backrefs: yes
-    state: present
-    regexp: '(^UUID=[\w=/\-\.]+\s/tmp\s+.*\s+)defaults(.*)$'
-    line: '\1{{ use_partition_options }}\2'
-  when: config_partition_tmp == true and config_partition_options == true
+#*	/dev/shm (RHEL, SLES) (nodev, nosuid, noexec)
+#*	/run/shm (Ubuntu) (nodev, nosuid, noexec)
 
-- name: req-010.2 set options for partition /var
-  lineinfile:
-    path: '/etc/fstab'
-    backrefs: yes
-    state: present
-    regexp: '(^UUID=[\w=/\-\.]+\s/var\s+.*\s+)defaults(.*)$'
-    line: '\1{{ use_partition_options }}\2'
-  when: config_partition_var == true and config_partition_options == true
+#- name: req-010.1 set options for partition /tmp
+#  lineinfile:
+#    path: '/etc/fstab'
+#    backrefs: yes
+#    state: present
+#    regexp: '(^UUID=[\w=/\-\.]+\s/tmp\s+.*\s+)defaults(.*)$'
+#    line: '\1{{ use_partition_options }}\2'
+#  when: config_partition_tmp == true and config_partition_options == true
 
-- name: req-010.3 set options for partition /var/tmp
-  lineinfile:
-    path: '/etc/fstab'
-    backrefs: yes
-    state: present
-    regexp: '(^UUID=[\w=/\-\.]+\s/var/tmp\s+.*\s+)defaults(.*)$'
-    line: '\1{{ use_partition_options }}\2'
-  when: config_partition_var_tmp == true and config_partition_options == true
+#- name: req-010.2 set options for partition /var
+#  lineinfile:
+#    path: '/etc/fstab'
+#    backrefs: yes
+#    state: present
+#    regexp: '(^UUID=[\w=/\-\.]+\s/var\s+.*\s+)defaults(.*)$'
+#    line: '\1{{ use_partition_options }}\2'
+#  when: config_partition_var == true and config_partition_options == true
 
-- name: req-010.4 set options for partition /var/log
-  lineinfile:
-    path: '/etc/fstab'
-    backrefs: yes
-    state: present
-    regexp: '(^UUID=[\w=/\-\.]+\s/var/log\s+.*\s+)defaults(.*)$'
-    line: '\1{{ use_partition_options }}\2'
-  when: config_partition_var_log == true and config_partition_options == true
+#- name: req-010.3 set options for partition /var/tmp
+#  lineinfile:
+#    path: '/etc/fstab'
+#    backrefs: yes
+#    state: present
+#    regexp: '(^UUID=[\w=/\-\.]+\s/var/tmp\s+.*\s+)defaults(.*)$'
+#    line: '\1{{ use_partition_options }}\2'
+#  when: config_partition_var_tmp == true and config_partition_options == true
 
-- name: req-010.5 set options for partition /home
-  lineinfile:
-    path: '/etc/fstab'
-    backrefs: yes
-    state: present
-    regexp: '(^UUID=[\w=/\-\.]+\s/home\s+.*\s+)defaults(.*)$'
-    line: '\1{{ use_partition_options }}\2'
-  when: config_partition_home == true and config_partition_options == true
+#- name: req-010.4 set options for partition /var/log
+#  lineinfile:
+#    path: '/etc/fstab'
+#    backrefs: yes
+#    state: present
+#    regexp: '(^UUID=[\w=/\-\.]+\s/var/log\s+.*\s+)defaults(.*)$'
+#    line: '\1{{ use_partition_options }}\2'
+#  when: config_partition_var_log == true and config_partition_options == true
 
-- block:
-    - name: req-010.1 check options for partition /tmp
-      lineinfile:
-        path: '/etc/fstab'
-        backrefs: yes
-        state: present
-        regexp: '(^UUID=[\w=/\-\.]+\s/tmp\s+.*\s+)defaults(.*)$'
-        line: '\1{{ use_partition_options }}\2'
-      register: check_tmp_options
-      failed_when: (check_tmp_options is changed)
-  rescue:
-    - debug:
-        msg: "WARNING: Options for partition /tmp are missing!"
-  when: check_tmp.changed == false
+#- name: req-010.5 set options for partition /home
+#  lineinfile:
+#    path: '/etc/fstab'
+#    backrefs: yes
+#    state: present
+#    regexp: '(^UUID=[\w=/\-\.]+\s/home\s+.*\s+)defaults(.*)$'
+#    line: '\1{{ use_partition_options }}\2'
+#  when: config_partition_home == true and config_partition_options == true
 
-- block:
-    - name: req-010.2 set options for partition /var
-      lineinfile:
-        path: '/etc/fstab'
-        backrefs: yes
-        state: present
-        regexp: '(^UUID=[\w=/\-\.]+\s/var\s+.*\s+)defaults(.*)$'
-        line: '\1{{ use_partition_options }}\2'
-      register: check_var_options
-      failed_when: (check_var_options is changed)
-  rescue:
-    - debug:
-        msg: "WARNING: Options for partition /var are missing!"
-  when: check_var.changed == false
+#- block:
+#    - name: req-010.1 check options for partition /tmp
+#      lineinfile:
+#        path: '/etc/fstab'
+#        backrefs: yes
+#        state: present
+#        regexp: '(^UUID=[\w=/\-\.]+\s/tmp\s+.*\s+)defaults(.*)$'
+#        line: '\1{{ use_partition_options }}\2'
+#      register: check_tmp_options
+#      failed_when: (check_tmp_options is changed)
+#  rescue:
+#    - debug:
+#        msg: "WARNING: Options for partition /tmp are missing!"
+#  when: check_tmp.changed == false
 
-- block:
-    - name: req-010.3 set options for partition /var/tmp
-      lineinfile:
-        path: '/etc/fstab'
-        backrefs: yes
-        state: present
-        regexp: '(^UUID=[\w=/\-\.]+\s/var/tmp\s+.*\s+)defaults(.*)$'
-        line: '\1{{ use_partition_options }}\2'
-      register: check_var_tmp_options
-      failed_when: (check_var_tmp_options is changed)
-  rescue:
-    - debug:
-        msg: "WARNING: Options for partition /var/tmp are missing!"
-  when: check_var_tmp.changed == false
+#- block:
+#    - name: req-010.2 set options for partition /var
+#      lineinfile:
+#        path: '/etc/fstab'
+#        backrefs: yes
+#        state: present
+#        regexp: '(^UUID=[\w=/\-\.]+\s/var\s+.*\s+)defaults(.*)$'
+#        line: '\1{{ use_partition_options }}\2'
+#      register: check_var_options
+#      failed_when: (check_var_options is changed)
+#  rescue:
+#    - debug:
+#        msg: "WARNING: Options for partition /var are missing!"
+#  when: check_var.changed == false
 
-- block:
-    - name: req-010.4 set options for partition /var/log
-      lineinfile:
-        path: '/etc/fstab'
-        backrefs: yes
-        state: present
-        regexp: '(^UUID=[\w=/\-\.]+\s/var/log\s+.*\s+)defaults(.*)$'
-        line: '\1{{ use_partition_options }}\2'
-      register: check_var_log_options
-      failed_when: (check_var_log_options is changed)
-  rescue:
-    - debug:
-        msg: "WARNING: Options for partition /var/log are missing!"
-  when: check_var_log.changed == false
+#- block:
+#    - name: req-010.3 set options for partition /var/tmp
+#      lineinfile:
+#        path: '/etc/fstab'
+#        backrefs: yes
+#        state: present
+#        regexp: '(^UUID=[\w=/\-\.]+\s/var/tmp\s+.*\s+)defaults(.*)$'
+#        line: '\1{{ use_partition_options }}\2'
+#      register: check_var_tmp_options
+#      failed_when: (check_var_tmp_options is changed)
+#  rescue:
+#    - debug:
+#        msg: "WARNING: Options for partition /var/tmp are missing!"
+#  when: check_var_tmp.changed == false
 
-- block:
-    - name: req-010.5 set options for partition /home
-      lineinfile:
-        path: '/etc/fstab'
-        backrefs: yes
-        state: present
-        regexp: '(^UUID=[\w=/\-\.]+\s/home\s+.*\s+)defaults(.*)$'
-        line: '\1{{ use_partition_options }}\2'
-      register: check_home_options
-      failed_when: (check_home_options is changed)
-  rescue:
-    - debug:
-        msg: "WARNING: Options for partition /var/log are missing!"
-  when: check_home.changed == false
+#- block:
+#    - name: req-010.4 set options for partition /var/log
+#      lineinfile:
+#        path: '/etc/fstab'
+#        backrefs: yes
+#        state: present
+#        regexp: '(^UUID=[\w=/\-\.]+\s/var/log\s+.*\s+)defaults(.*)$'
+#        line: '\1{{ use_partition_options }}\2'
+#      register: check_var_log_options
+#      failed_when: (check_var_log_options is changed)
+#  rescue:
+#    - debug:
+#        msg: "WARNING: Options for partition /var/log are missing!"
+#  when: check_var_log.changed == false
+
+#- block:
+#    - name: req-010.5 set options for partition /home
+#      lineinfile:
+#        path: '/etc/fstab'
+#        backrefs: yes
+#        state: present
+#        regexp: '(^UUID=[\w=/\-\.]+\s/home\s+.*\s+)defaults(.*)$'
+#        line: '\1{{ use_partition_options }}\2'
+#      register: check_home_options
+#      failed_when: (check_home_options is changed)
+#  rescue:
+#    - debug:
+#        msg: "WARNING: Options for partition /var/log are missing!"
+#  when: check_home.changed == false
 
 # Req 7:	Automounting must be disabled.
-#<tbd> Noch teste!
 
 - block:
     - name: req-007.1 uninstall autofs
@@ -382,7 +388,58 @@
   when: uninstall_autofs
 
 # Req 8: The use of at/cron must be restricted to authorized users.
-# <tbd>
+
+- block:
+  - name: req-008.1 delete cron & at allow files
+    file:
+      path: "{{ item }}"
+      state: absent
+    register: check_deny
+    failed_when: check_deny.changed and ansible_check_mode
+    with_items:
+      - "/etc/cron.deny"
+      - "/etc/at.deny"
+  rescue:
+    - debug:
+        msg: "FAILED: req-008 (1/2)"
+  when: restrict_cron
+
+- name: req-008.2 generate cron & at allow files
+  file:
+    path: "{{ item }}"
+    state: touch
+    owner: root
+    group: root
+    mode:  "og-rwx"
+  with_items:
+    - "/etc/cron.allow"
+    - "/etc/at.allow"
+  when: restrict_cron and not ansible_check_mode
+
+- block:
+  - name: req-008.2 check if cron & at allow files exist
+    stat:
+      path: "{{ item }}"
+    register: check_allow_files
+    failed_when: not check_allow_files.stat.exists
+    with_items:
+      - "/etc/cron.allow"
+      - "/etc/at.allow"
+  - name: req-008.2 check permissions of cron & at allow files
+    file:
+      path: "{{ item }}"
+      owner: root
+      group: root
+      mode:  "og-rwx"
+    register: check_file_rights
+    failed_when: check_file_rights.changed
+    with_items:
+      - "/etc/cron.allow"
+      - "/etc/at.allow"
+  rescue:
+    - debug:
+        msg: "FAILED: req-008 (2/2)"
+  when: restrict_cron and ansible_check_mode
 
 # Req 9: Sticky bit must be set on all world-writable directories.
 # <tbd>

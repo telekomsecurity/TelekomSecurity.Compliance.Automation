@@ -10,27 +10,53 @@
     msg: Distro Major Version "{{ ansible_distribution_major_version }}"
 
 - block:
-    - name: req-003.1 uninstall servers
-      package:
-        name: '{{ item }}'
-        state: absent
-      with_items: '{{ list_uninstall_servers }}'
-      register: check_servers
-      failed_when: check_servers.changed and ansible_check_mode
-  rescue:
-      - debug:
-          msg: "FAILED: req-003 (1/2)"
-  when: uninstall_servers
-
-- block:
-    - name: req-003.2 uninstall clients
-      package:
-        name: '{{ item }}'
-        state: absent
-      with_items: '{{ list_uninstall_clients }}'
-      register: check_clients
-      failed_when: check_clients.changed and ansible_check_mode
+  - name: req-008.1 delete cron & at allow files
+    file:
+      path: "{{ item }}"
+      state: absent
+    register: check_deny
+    failed_when: check_deny.changed and ansible_check_mode
+    with_items:
+      - "/etc/cron.deny"
+      - "/etc/at.deny"
   rescue:
     - debug:
-        msg: "FAILED: req-003 (2/2)"
-  when: uninstall_clients
+        msg: "FAILED: req-008 (1/2)"
+  when: restrict_cron
+
+- name: req-008.2 generate cron & at allow files
+  file:
+    path: "{{ item }}"
+    state: touch
+    owner: root
+    group: root
+    mode:  "og-rwx"
+  with_items:
+    - "/etc/cron.allow"
+    - "/etc/at.allow"
+  when: restrict_cron and not ansible_check_mode
+
+- block:
+  - name: req-008.2 check if cron & at allow files exist
+    stat:
+      path: "{{ item }}"
+    register: check_allow_files
+    failed_when: not check_allow_files.stat.exists
+    with_items:
+      - "/etc/cron.allow"
+      - "/etc/at.allow"
+  - name: req-008.2 check permissions of cron & at allow files
+    file:
+      path: "{{ item }}"
+      owner: root
+      group: root
+      mode:  "og-rwx"
+    register: check_file_rights
+    failed_when: check_file_rights.changed
+    with_items:
+      - "/etc/cron.allow"
+      - "/etc/at.allow"
+  rescue:
+    - debug:
+        msg: "FAILED: req-008 (2/2)"
+  when: restrict_cron and ansible_check_mode

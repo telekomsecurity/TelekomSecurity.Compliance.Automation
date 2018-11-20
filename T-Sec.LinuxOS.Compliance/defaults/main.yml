@@ -14,3 +14,14 @@ used_tcp_services:
 used_udp_services:
   - ""
   # - ""
+
+# -IMPORTANT---------------------------------------------------------------
+#         Partitions must be generated during OS installation!
+# ------------------------------------------------------------------------
+
+# Enable (true) the available partitions on your system.
+config_tmp: false
+config_var: false
+config_vartmp: false
+config_varlog: false
+config_home: false
