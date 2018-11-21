@@ -12,7 +12,7 @@
 # ========================================================================
 
 modprobe_package: 'module-init-tools'
-use_rsync_deamon: 'rsyncd'
+rsync_deamon: 'rsyncd'
 
 # ------ old --- old --- old --- old ------
 

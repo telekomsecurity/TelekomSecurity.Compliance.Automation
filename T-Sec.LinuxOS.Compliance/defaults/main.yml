@@ -6,12 +6,12 @@
 # ------------------------------------------------------------------------
 
 # Needed TCP services that are used on system must be defined.
-used_tcp_services:
+tcp_services:
   - "22"
   # - ""
 
 # Needed UDP services that are used on system must be defined.
-used_udp_services:
+udp_services:
   - ""
   # - ""
 
@@ -20,8 +20,10 @@ used_udp_services:
 # ------------------------------------------------------------------------
 
 # Enable (true) the available partitions on your system.
-config_tmp: false
-config_var: false
-config_vartmp: false
-config_varlog: false
-config_home: false
+config_partitions: true
+partitions:
+  - "tmp"
+  - "var"
+  # - "/var/log" # instead of /var?
+  # - "/var/tmp" # instead of /var?
+  # - "/home"

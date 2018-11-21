@@ -8,14 +8,14 @@
 
 # Req 1: Unused services and protocols must be deactivated.
 
-- name: req-001.0 stop rpcbind (14.04)
+- name: req-001.1 stop rpcbind (14.04)
   service:
     name: rpcbind
     state: stopped
   when: not ansible_check_mode and
        ( disable_rpcbind and ansible_distribution_version == "14.04" )
 
-- name: req-001.0 disable rpcbind (14.04)
+- name: req-001.2 disable rpcbind (14.04)
   shell: update-rc.d -f rpcbind remove
   register: rpcbind_result
   changed_when: "'Removing' in rpcbind_result.stdout"
@@ -23,7 +23,7 @@
   when: not ansible_check_mode and
        ( disable_rpcbind and ansible_distribution_version == "14.04" )
 
-- name: req-001.0 disable rpcbind (CentOS)
+- name: req-001.3 disable rpcbind (CentOS)
   systemd:
     name: rpcbind
     state: stopped
@@ -31,14 +31,14 @@
   when: not ansible_check_mode and
        ( disable_rpcbind and ansible_distribution == "CentOS" )
 
-- name: req-001.0 stop rsync (14.04)
+- name: req-001.4 stop rsync (14.04)
   service:
-    name: "{{ use_rsync_deamon }}"
+    name: "{{ rsync_deamon }}"
     state: stopped
   when: not ansible_check_mode and
        ( disable_rpcbind and ansible_distribution_version == "14.04" )
 
-- name: req-001.0 disable rsync (14.04)
+- name: req-001.5 disable rsync (14.04)
   shell: update-rc.d -f "{{ use_rsync_deamon }}" remove
   register: rsync_result
   changed_when: "'Removing' in rsync_result.stdout"
@@ -46,22 +46,22 @@
   when: not ansible_check_mode and
        ( disable_rsync and ansible_distribution_version == "14.04" )
 
-- name: req-001.0 disable rsync service (not 14.04)
+- name: req-001.6 disable rsync service (not 14.04)
   systemd:
-    name: "{{ use_rsync_deamon }}"
+    name: "{{ rsync_deamon }}"
     state: stopped
     enabled: no
   when: not ansible_check_mode and
        ( disable_rsync and ansible_distribution_version != "14.04" )
 
 - block:
-    - name: req-001.1 check for open tcp ports
+    - name: req-001.7 check for open tcp ports
       shell: ss -nlt 2>/dev/null | awk '($1 == "LISTEN" && $4 !~ /127.0.0.*.:./ && $4 !~ /::*.:./) {print $4}' | sed 's/.*://' | sort -nu
       register: open_tcp_ports
       changed_when: false
       check_mode: no
     - set_fact:
-        check_tcp: '{{ open_tcp_ports.stdout_lines | difference(used_tcp_services) }}'
+        check_tcp: '{{ open_tcp_ports.stdout_lines | difference(tcp_services) }}'
     - set_fact: count_tcp=0
     - set_fact: count_tcp={{ count_tcp | int + 1 }}
       with_items: "{{ check_tcp }}"
@@ -70,17 +70,17 @@
       when: count_tcp != "0"
   rescue:
      - debug:
-         msg: "FAILED: req-001 (1/2)"
+         msg: "Req-001 (1/2): FAILED"
   when: ansible_check_mode
 
 - block:
-    - name: req-001.2 check for open UDP ports
+    - name: req-001.8 check for open UDP ports
       shell: ss -nlu 2>/dev/null | awk '($1 == "UNCONN" && $4 !~ /127.0.0.*.:./ && $4 !~ /::*.:./) {print $4}' | sed 's/.*://' | sort -nu
       register: open_udp_ports
       changed_when: false
       check_mode: no
     - set_fact:
-        check_udp: '{{ open_udp_ports.stdout_lines | difference(used_udp_services) }}'
+        check_udp: '{{ open_udp_ports.stdout_lines | difference(udp_services) }}'
     - set_fact: count_udp=0
     - set_fact: count_udp={{ count_udp | int + 1 }}
       with_items: "{{ check_udp }}"
@@ -89,7 +89,7 @@
       when: count_udp != "0"
   rescue:
      - debug:
-         msg: "FAILED: req-001 (2/2)"
+         msg: "Req-001 (2/2): FAILED"
   when: ansible_check_mode
 
 # Req 2: The reachability of services must be restricted.
@@ -102,12 +102,12 @@
       package:
         name: '{{ item }}'
         state: absent
-      with_items: '{{ list_uninstall_servers }}'
+      with_items: '{{ servers }}'
       register: check_servers
       failed_when: check_servers.changed and ansible_check_mode
   rescue:
       - debug:
-          msg: "FAILED: req-003 (1/2)"
+          msg: "Req-003 (1/2): FAILED"
   when: uninstall_servers
 
 - block:
@@ -115,33 +115,33 @@
       package:
         name: '{{ item }}'
         state: absent
-      with_items: '{{ list_uninstall_clients }}'
+      with_items: '{{ clients }}'
       register: check_clients
       failed_when: check_clients.changed and ansible_check_mode
   rescue:
     - debug:
-        msg: "FAILED: req-003 (2/2)"
+        msg: "Req-003 (2/2): FAILED"
   when: uninstall_clients
 
 # Req 4:	Unused filesystems must be disabled.
 
-- name: req-004.0 install modprobe
+- name: req-004.1 install modprobe
   package:
     name: '{{ modprobe_package }}'
     state: present
-  when: disable_filesystems and not ansible_check_mode
+  when: config_filesystems and not ansible_check_mode
 
-- name: req-004.0 disable unused filesystems
+- name: req-004.2 disable unused filesystems
   template:
     src: 'modprobe.j2'
     dest: '/etc/modprobe.d/disable.conf'
     owner: root
     group: root
     mode: 0640
-  when: disable_filesystems and not ansible_check_mode
+  when: config_filesystems and not ansible_check_mode
 
 - block:
-    - name: req-004.1 check for modprobe file
+    - name: req-004.3 check for modprobe file
       stat:
         path: '/etc/modprobe.d/disable.conf'
       register: check_file
@@ -153,150 +153,49 @@
         state: present
       register: check_modprobe
       failed_when: (check_modprobe is changed)
-      with_items: "{{ list_filesystems }}"
+      with_items: "{{ filesystems }}"
       when: check_file.stat.exists
   rescue:
     - debug:
-        msg: "FAILED: req-004 (1/2)"
+        msg: "Req-004 (1/2): FAILED"
   when: disable_filesystems and ansible_check_mode
 
 - block:
-  - name: Add the 802.1q module
+  - name: req-004.4 check loaded kernel modules
     modprobe:
       name: '{{ item }}'
       state: absent
     register: check_modules
     failed_when: (check_modules is changed and ansible_check_mode)
     with_items:
-      - "{{ list_filesystems }}"
+      - "{{ filesystems }}"
   rescue:
     - debug:
-        msg: "FAILED: req-004 (2/2)"
+        msg: "Req-004 (2/2): FAILED"
   when: disable_filesystems
 
 # Req 5:	Dedicated partitions must be used for growing content that can influence the availability of the system.
-# <tbd> Noch anpassen und testen!
 
-# /tmp
-# /var
-
-# /var/log; /var/tmp (instead of /var)
-# /home
-
-#- block:
-#    - name: req-009.1 check if partition /tmp exists
-#      lineinfile:
-#        path: '/etc/fstab'
-#        line: "/tmp "
-#        state: present
-#      register: check_tmp
-#      failed_when: (check_tmp is changed)
-#  rescue:
-#    - debug:
-#        msg: "WARNING: Partition /tmp is missing!"
-
-#- block:
-#    - name: req-009.2 check if partition /var exists
-#      lineinfile:
-#        path: '/etc/fstab'
-#        line: "/var "
-#        state: present
-#      register: check_var
-#      failed_when: (check_var is changed)
-#  rescue:
-#    - debug:
-#        msg: "WARNING: Partition for /var is missing!"
-#  when: config_partition_var_tmp == false or config_partition_var_log == false
-
-#- block:
-#    - name: req-009.3 check if partition /var/tmp exists
-#      lineinfile:
-#        path: '/etc/fstab'
-#        line: "/var/tmp "
-#        state: present
-#      register: check_var_tmp
-#      failed_when: (check_var_tmp is changed)
-#  rescue:
-#    - debug:
-#        msg: "WARNING: Partition for /var/tmp is missing!"
-#  when: config_partition_var == false
-#
-#- block:
-#    - name: req-009.4 check if partition /var/log exists
-#      lineinfile:
-#        path: '/etc/fstab'
-#        line: "/var/log "
-#        state: present
-#      register: check_var_log
-#      failed_when: (check_var_log is changed)
-#  rescue:
-#    - debug:
-#        msg: "WARNING: Partition for /var/log is missing!"
-#  when: config_partition_var == false
-#
-#- block:
-#    - name: req-009.5 check if partition /home exists
-#      lineinfile:
-#        path: '/etc/fstab'
-#        line: "/home "
-#        state: present
-#      register: check_home
-#      failed_when: (check_home is changed)
-#  rescue:
-#    - debug:
-#        msg: "WARNING: Partition for /home is missing!"
-#  when: config_partition_home == true
+- block:
+    - name: req-005.1 check partitions
+      lineinfile:
+        path: '/etc/fstab'
+        line: "{{item}} "
+        state: present
+      register: check_partitions
+      failed_when: check_partitions.changed
+      with_items:
+        - "{{ partitions }}"
+  rescue:
+    - debug:
+        msg: "Req-005 (1/1): FAILED"
+  when: config_partitions and ansible_check_mode
 
 # Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where this is applicable.
 # <tbd> Noch anpassen und testen
 
 #*	/dev/shm (RHEL, SLES) (nodev, nosuid, noexec)
 #*	/run/shm (Ubuntu) (nodev, nosuid, noexec)
-
-#- name: req-010.1 set options for partition /tmp
-#  lineinfile:
-#    path: '/etc/fstab'
-#    backrefs: yes
-#    state: present
-#    regexp: '(^UUID=[\w=/\-\.]+\s/tmp\s+.*\s+)defaults(.*)$'
-#    line: '\1{{ use_partition_options }}\2'
-#  when: config_partition_tmp == true and config_partition_options == true
-
-#- name: req-010.2 set options for partition /var
-#  lineinfile:
-#    path: '/etc/fstab'
-#    backrefs: yes
-#    state: present
-#    regexp: '(^UUID=[\w=/\-\.]+\s/var\s+.*\s+)defaults(.*)$'
-#    line: '\1{{ use_partition_options }}\2'
-#  when: config_partition_var == true and config_partition_options == true
-
-#- name: req-010.3 set options for partition /var/tmp
-#  lineinfile:
-#    path: '/etc/fstab'
-#    backrefs: yes
-#    state: present
-#    regexp: '(^UUID=[\w=/\-\.]+\s/var/tmp\s+.*\s+)defaults(.*)$'
-#    line: '\1{{ use_partition_options }}\2'
-#  when: config_partition_var_tmp == true and config_partition_options == true
-
-#- name: req-010.4 set options for partition /var/log
-#  lineinfile:
-#    path: '/etc/fstab'
-#    backrefs: yes
-#    state: present
-#    regexp: '(^UUID=[\w=/\-\.]+\s/var/log\s+.*\s+)defaults(.*)$'
-#    line: '\1{{ use_partition_options }}\2'
-#  when: config_partition_var_log == true and config_partition_options == true
-
-#- name: req-010.5 set options for partition /home
-#  lineinfile:
-#    path: '/etc/fstab'
-#    backrefs: yes
-#    state: present
-#    regexp: '(^UUID=[\w=/\-\.]+\s/home\s+.*\s+)defaults(.*)$'
-#    line: '\1{{ use_partition_options }}\2'
-#  when: config_partition_home == true and config_partition_options == true
 
 #- block:
 #    - name: req-010.1 check options for partition /tmp
@@ -310,7 +209,7 @@
 #      failed_when: (check_tmp_options is changed)
 #  rescue:
 #    - debug:
-#        msg: "WARNING: Options for partition /tmp are missing!"
+#        msg: "Req-006 (x/x): FAILED"
 #  when: check_tmp.changed == false
 
 #- block:
@@ -325,7 +224,7 @@
 #      failed_when: (check_var_options is changed)
 #  rescue:
 #    - debug:
-#        msg: "WARNING: Options for partition /var are missing!"
+#        msg: "Req-006 (x/x): FAILED"
 #  when: check_var.changed == false
 
 #- block:
@@ -340,7 +239,7 @@
 #      failed_when: (check_var_tmp_options is changed)
 #  rescue:
 #    - debug:
-#        msg: "WARNING: Options for partition /var/tmp are missing!"
+#        msg: "Req-006 (x/x): FAILED"
 #  when: check_var_tmp.changed == false
 
 #- block:
@@ -355,7 +254,7 @@
 #      failed_when: (check_var_log_options is changed)
 #  rescue:
 #    - debug:
-#        msg: "WARNING: Options for partition /var/log are missing!"
+#        msg: "Req-006 (x/x): FAILED"
 #  when: check_var_log.changed == false
 
 #- block:
@@ -370,7 +269,7 @@
 #      failed_when: (check_home_options is changed)
 #  rescue:
 #    - debug:
-#        msg: "WARNING: Options for partition /var/log are missing!"
+#        msg: "Req-006 (x/x): FAILED"
 #  when: check_home.changed == false
 
 # Req 7:	Automounting must be disabled.
@@ -384,7 +283,7 @@
       failed_when: check_autofs.changed and ansible_check_mode
   rescue:
     - debug:
-        msg: "FAILED: req-007 (1/1)"
+        msg: "Req-007 (1/1): FAILED"
   when: uninstall_autofs
 
 # Req 8: The use of at/cron must be restricted to authorized users.
@@ -401,8 +300,8 @@
       - "/etc/at.deny"
   rescue:
     - debug:
-        msg: "FAILED: req-008 (1/2)"
-  when: restrict_cron
+        msg: "Req-008 (1/2): FAILED"
+  when: config_cron
 
 - name: req-008.2 generate cron & at allow files
   file:
@@ -414,10 +313,10 @@
   with_items:
     - "/etc/cron.allow"
     - "/etc/at.allow"
-  when: restrict_cron and not ansible_check_mode
+  when: config_cron and not ansible_check_mode
 
 - block:
-  - name: req-008.2 check if cron & at allow files exist
+  - name: req-008.3 check if cron & at allow files exist
     stat:
       path: "{{ item }}"
     register: check_allow_files
@@ -425,7 +324,7 @@
     with_items:
       - "/etc/cron.allow"
       - "/etc/at.allow"
-  - name: req-008.2 check permissions of cron & at allow files
+  - name: req-008.4 check permissions of cron & at allow files
     file:
       path: "{{ item }}"
       owner: root
@@ -438,32 +337,255 @@
       - "/etc/at.allow"
   rescue:
     - debug:
-        msg: "FAILED: req-008 (2/2)"
-  when: restrict_cron and ansible_check_mode
+        msg: "Req-008 (2/2): FAILED"
+  when: config_cron and ansible_check_mode
 
 # Req 9: Sticky bit must be set on all world-writable directories.
-# <tbd>
+
+- block:
+    - name: req-009.1 search for world-writable directories
+      shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type d -perm -0002 \! -perm -1000 2>/dev/null
+      register: check_directories
+      failed_when: ansible_check_mode and check_directories.stdout != ""
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "Req-009 (1/1): FAILED"
+  when: config_worldwritable_directories
+
+- name: req-009.0 set sticky bit for world-writable directories
+  file:
+    path: "{{ item }}"
+    mode: o+t
+    state: directory
+  with_items: "{{ check_directories.stdout_lines | default([]) }}"
+  when: check_directories.stdout != "" and not ansible_check_mode
 
 # Req 10: No regular files that are world writable must exist.
-# <tbd>
+
+- block:
+    - name: req-010.1 search for world-writable files
+      shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f -perm -0002 2>/dev/null
+      register: check_files
+      failed_when: ansible_check_mode and check_files.stdout != ""
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "Req-010 (1/1): FAILED"
+  when: config_worldwritable_files == true
+
+- name: req-010.2 change permissions of world-writable files
+  file:
+    path: "{{ item }}"
+    mode: o-w
+  with_items: "{{ check_files.stdout_lines | default([]) }}"
+  when: check_files.stdout != "" and not ansible_check_mode
 
 # Req 11:	Passwords must be protected with an appropriate hashing function.
-# <tbd>
+
+- block:
+    - name: req-011.1 set password encryption to sha-512 in login.defs
+      lineinfile:
+        dest: '/etc/login.defs'
+        state: present
+        regexp: '^ENCRYPT_METHOD*'
+        line: 'ENCRYPT_METHOD SHA512'
+      register: check_pass_encrypt
+      failed_when: check_pass_encrypt.changed and ansible_check_mode
+  rescue:
+    - debug:
+        msg: "Req-011 (1/3): FAILED"
+  when: config_sha512
+
+- block:
+    - name: req-010.2 set max rounds for sha-512
+      lineinfile:
+        dest: '/etc/login.defs'
+        state: present
+        regexp: '^SHA_CRYPT_MAX_ROUNDS*'
+        line: 'SHA_CRYPT_MAX_ROUNDS {{ sha512_rounds_max }}'
+      register: check_rounds_max
+      failed_when: check_rounds_max.changed and ansible_check_mode
+  rescue:
+    - debug:
+        msg: "Req-011 (2/3): FAILED"
+  when: config_sha512
+
+- block:
+    - name: req-010.3 set min rounds for sha-512
+      lineinfile:
+        dest: '/etc/login.defs'
+        state: present
+        regexp: '^SHA_CRYPT_MIN_ROUNDS*'
+        insertafter: '^ENCRYPT_METHOD SHA512'
+        line: 'SHA_CRYPT_MIN_ROUNDS {{ sha512_rounds_min }}'
+      register: check_rounds_min
+      failed_when: check_rounds_min.changed and ansible_check_mode
+  rescue:
+    - debug:
+        msg: "Req-011 (3/3): FAILED"
+  when: config_sha512
 
 # Req 12: The default user umask must be 027 or more restrictive.
-# <tbd>
+
+- block:
+    - name: req-011.1 check default umask for users
+      lineinfile:
+        dest: '/etc/login.defs'
+        line: 'UMASK {{ umask }}'
+        regexp: '^UMASK'
+        state: present
+      register: check_umask
+      failed_when: check_umask.changed and ansible_check_mode
+  rescue:
+    - debug:
+        msg: "Req-012 (1/1): FAILED"
+  when: config_umask
 
 # Req 13:	Not needed SUID and SGID bits must be removed from executables.
-# <tbd>
+
+- block:
+    - name: req-013.1 remove suid/sgid bit from binaries in blacklist
+      file:
+        path: '{{ item }}'
+        mode: 'a-s'
+        state: 'file'
+        follow: 'yes'
+      register: check_sbit
+      failed_when: check_sbit.changed and ansible_check_mode
+      with_items:
+        - "{{ suid_sgid_blacklist }}"
+  rescue:
+    - debug:
+        msg: "Req-013 (1/2): FAILED"
+  when: config_suid_sgid
+
+- block:
+    - name: req-013.2 find binaries with suid/sgid set
+      shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f \( -perm -4000 -o -perm -2000 \) -print 2>/dev/null
+      register: sbit_binaries
+      changed_when: false
+      check_mode: no
+    - name: req-013.3 combine found files with default whitelist
+      set_fact:
+        suid: '{{ sbit_binaries.stdout_lines | difference(suid_sgid_whitelist) }}'
+    - name: req-013.4 remove suid/sgid bit from all binaries except whitelists
+      file:
+        path: '{{ item }}'
+        mode: 'a-s'
+        state: 'file'
+        follow: 'yes'
+      register: check_sbit_unknown
+      failed_when: check_sbit_unknown.changed and ansible_check_mode
+      with_items:
+        - "{{ suid }}"
+  rescue:
+    - debug:
+        msg: "Req-013 (2/2): FAILED"
+  when: config_suid_sgid
 
 # Req 14:	Core dumps must be disabled.
-# <tbd>
+
+- block:
+    - name: req-014.1 create limits.d-directory
+      file:
+        path: '/etc/security/limits.d'
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+      register: check_limitsd
+      failed_when: check_limitsd.changed and ansible_check_mode
+  rescue:
+    - debug:
+        msg: "Req-014 (1/): FAILED"
+  when: config_coredumps
+
+- name: req-014.2 create file limits.conf
+  template:
+    src: 'limits.conf.j2'
+    dest: '/etc/security/limits.d/10.hardcore.conf'
+    owner: root
+    group: root
+    mode: 0440
+  when: config_coredumps and not ansible_check_mode
+
+- block:
+    - name: req-014.3 check restriction of coredumps
+      shell: grep "^*[[:space:]]"{{item}}"[[:space:]]core[[:space:]]0" /etc/security/limits.d/* 2>/dev/null
+      register: check_coredumps
+      failed_when: check_coredumps.stdout == ""
+      changed_when: false
+      check_mode: no
+      with_items:
+        - "hard"
+        - "soft"
+  rescue:
+    - debug:
+        msg: "Req-014 (2/3): FAILED"
+  when: ansible_check_mode and not check_limitsd.changed
+
+- block:
+    - name: reg-014.4 check sysctl-settings for coredumps
+      sysctl:
+        name: '{{ item.key }}'
+        value: '{{ item.value }}'
+        sysctl_set: yes
+        state: present
+        reload: yes
+      register: check_sysctl
+      failed_when: check_sysctl.changed and ansible_check_mode
+      with_dict: '{{ coredumps }}'
+  rescue:
+    - debug:
+        msg: "Req-014 (3/3): FAILED"
+  when: config_coredumps
 
 # Req 15:	Protection against buffer overflows must be enabled.
-# <tbd>
+
+- block:
+    - name: req-015.1 check if nx is enabled in bios
+      shell: dmesg | awk -F' ' '{if ($3 == "NX") print $7}'
+      register: check_nx
+      failed_when: check_nx.stdout != "active"
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "Req-015 (1/2): FAILED"
+  when: config_buffer_overflow_protection
+
+- block:
+    - name: reg-015.2 check sysctl-settings for buffer overflow protection
+      sysctl:
+        name: '{{ item.key }}'
+        value: '{{ item.value }}'
+        sysctl_set: yes
+        state: present
+        reload: yes
+      register: check_sysctl
+      failed_when: check_sysctl.changed and ansible_check_mode
+      with_dict: '{{ buffer_overflow_protection }}'
+  rescue:
+    - debug:
+        msg: "Req-015 (2/2): FAILED"
+  when: config_buffer_overflow_protection
 
 # Req 16:	Prelink must not be used.
-# <tbd>
+
+- block:
+    - name: req-016.1 uninstall prelink
+      package:
+        name: 'prelink'
+        state: absent
+      register: check_prelink
+      failed_when: check_prelink.changed and ansible_check_mode
+  rescue:
+    - debug:
+        msg: "Req-016 (1/1): FAILED"
+  when: uninstall_prelink and ansible_os_family != "RedHat"
 
 # Req 17:	IPv4 protocol stack must be securely configured.
 # <tbd>

@@ -20,7 +20,7 @@ disable_rsync: true
 
 # Req 3: Unused software must not be installed or must be uninstalled.
 uninstall_servers: true
-list_uninstall_servers:
+servers:
   - "openbsd-inetd"
   - "inetutils-inetd"
   - "xinetd"
@@ -38,7 +38,7 @@ list_uninstall_servers:
   - "snmpd"
 
 uninstall_clients: true
-list_uninstall_clients:
+clients:
   - "rsh-redone-client"
   - "rsh-client"
   - "talk"
@@ -48,7 +48,7 @@ list_uninstall_clients:
 # Req 4:	Unused filesystems must be disabled.
 
 disable_filesystems: true
-list_filesystems:
+filesystems:
   - "cramfs"
   - "freevxfs"
   - "jffs2"
@@ -59,30 +59,119 @@ list_filesystems:
   - "vfat"
 
 # Req 5:	Dedicated partitions must be used for growing content that can influence the availability of the system.
-config_partitions: true
+# see /default/main.yml for variables for partitions
 
 # Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where this is applicable.
 config_partition_options: true
-use_options_tmp: "defaults,nosuid,nodev"
-use_options_vartmp: "defaults,nosuid,nodev,noexec"
-use_options_home: "defaults,nodev"
+options_tmp: "defaults,nosuid,nodev"
+options_vartmp: "defaults,nosuid,nodev,noexec"
+options_home: "defaults,nodev"
 
 # Req 7:	Automounting must be disabled.
 uninstall_autofs: true
 
 # Req 8: The use of at/cron must be restricted to authorized users.
-restrict_cron: true
+config_cron: true
 
 # Req 9: Sticky bit must be set on all world-writable directories.
+config_worldwritable_directories: true
 
 # Req 10: No regular files that are world writable must exist.
+config_worldwritable_files: true
 
 # Req 11:	Passwords must be protected with an appropriate hashing function.
+config_sha512: true
+sha512_rounds_min: 640000
+sha512_rounds_max: 640000
+
 # Req 12: The default user umask must be 027 or more restrictive.
+config_umask: true
+umask: "027"
+
 # Req 13:	Not needed SUID and SGID bits must be removed from executables.
+config_suid_sgid: true
+suid_sgid_blacklist:
+  - '/bin/mount'
+  - '/bin/su'
+  - '/bin/umount'
+  - '/usr/bin/rcp'
+  - '/usr/bin/rlogin'
+  - '/usr/bin/rsh'
+  - '/usr/libexec/openssh/ssh-keysign'
+  - '/usr/lib/openssh/ssh-keysign'
+  - '/sbin/netreport'
+  - '/usr/sbin/usernetctl'
+  - '/usr/sbin/userisdnctl'
+  - '/usr/sbin/pppd'
+  - '/usr/bin/lockfile'
+  - '/usr/bin/mail-lock'
+  - '/usr/bin/mail-unlock'
+  - '/usr/bin/mail-touchlock'
+  - '/usr/bin/dotlockfile'
+  - '/usr/bin/arping'
+  - '/usr/sbin/uuidd'
+  - '/usr/bin/mtr'
+  - '/usr/lib/evolution/camel-lock-helper-1.2'
+  - '/usr/lib/pt_chown'
+  - '/usr/lib/eject/dmcrypt-get-device'
+  - '/usr/lib/mc/cons.saver'
+
+suid_sgid_whitelist:
+  - '/bin/ping'
+  - '/sbin/pam_timestamp_check'
+  - '/sbin/unix_chkpwd'
+  - '/usr/bin/at'
+  - '/usr/bin/gpasswd'
+  - '/usr/bin/locate'
+  - '/usr/bin/newgrp'
+  - '/usr/bin/passwd'
+  - '/usr/bin/ssh-agent'
+  - '/usr/libexec/utempter/utempter'
+  - '/usr/sbin/lockdev'
+  - '/usr/sbin/sendmail.sendmail'
+  - '/usr/bin/expiry'
+  - '/bin/ping6'
+  - '/usr/bin/traceroute6.iputils'
+  - '/sbin/mount.nfs'
+  - '/sbin/umount.nfs'
+  - '/sbin/mount.nfs4'
+  - '/sbin/umount.nfs4'
+  - '/usr/bin/crontab'
+  - '/usr/bin/wall'
+  - '/usr/bin/write'
+  - '/usr/bin/screen'
+  - '/usr/bin/mlocate'
+  - '/usr/bin/chage'
+  - '/usr/bin/chfn'
+  - '/usr/bin/chsh'
+  - '/bin/fusermount'
+  - '/usr/bin/pkexec'
+  - '/usr/bin/sudo'
+  - '/usr/bin/sudoedit'
+  - '/usr/sbin/postdrop'
+  - '/usr/sbin/postqueue'
+  - '/usr/sbin/suexec'
+  - '/usr/lib/squid/ncsa_auth'
+  - '/usr/lib/squid/pam_auth'
+  - '/usr/kerberos/bin/ksu'
+  - '/usr/sbin/ccreds_validate'
+  - '/usr/lib/dbus-1.0/dbus-daemon-launch-helper'
+  - '/usr/lib/policykit-1/polkit-agent-helper-1'
+
 # Req 14:	Core dumps must be disabled.
+config_coredumps: true
+coredumps:
+  fs.suid_dumpable: 0
+
 # Req 15:	Protection against buffer overflows must be enabled.
+config_buffer_overflow_protection: true
+buffer_overflow_protection:
+  kernel.randomize_va_space: 2
+# kernel.exec-shield: 1   # only for RHEL < v7
+
 # Req 16:	Prelink must not be used.
+uninstall_prelink: true
+
 # Req 17:	IPv4 protocol stack must be securely configured.
 # Req 18:	IPv6 protocol stack must be securely configured.
 # Req 19:	Emerged vulnerabilities in software and hardware of a system must be fixed or protected against misuse.

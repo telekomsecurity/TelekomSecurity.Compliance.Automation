@@ -10,53 +10,16 @@
     msg: Distro Major Version "{{ ansible_distribution_major_version }}"
 
 - block:
-  - name: req-008.1 delete cron & at allow files
-    file:
-      path: "{{ item }}"
-      state: absent
-    register: check_deny
-    failed_when: check_deny.changed and ansible_check_mode
-    with_items:
-      - "/etc/cron.deny"
-      - "/etc/at.deny"
+    - name: req-005.1 check partitions
+      lineinfile:
+        path: '/etc/fstab'
+        line: "{{item}} "
+        state: present
+      register: check_partitions
+      failed_when: check_partitions.changed
+      with_items:
+        - "{{ partitions }}"
   rescue:
     - debug:
-        msg: "FAILED: req-008 (1/2)"
-  when: restrict_cron
-
-- name: req-008.2 generate cron & at allow files
-  file:
-    path: "{{ item }}"
-    state: touch
-    owner: root
-    group: root
-    mode:  "og-rwx"
-  with_items:
-    - "/etc/cron.allow"
-    - "/etc/at.allow"
-  when: restrict_cron and not ansible_check_mode
-
-- block:
-  - name: req-008.2 check if cron & at allow files exist
-    stat:
-      path: "{{ item }}"
-    register: check_allow_files
-    failed_when: not check_allow_files.stat.exists
-    with_items:
-      - "/etc/cron.allow"
-      - "/etc/at.allow"
-  - name: req-008.2 check permissions of cron & at allow files
-    file:
-      path: "{{ item }}"
-      owner: root
-      group: root
-      mode:  "og-rwx"
-    register: check_file_rights
-    failed_when: check_file_rights.changed
-    with_items:
-      - "/etc/cron.allow"
-      - "/etc/at.allow"
-  rescue:
-    - debug:
-        msg: "FAILED: req-008 (2/2)"
-  when: restrict_cron and ansible_check_mode
+        msg: "Req-005 (1/1): FAILED"
+  when: config_partitions and ansible_check_mode

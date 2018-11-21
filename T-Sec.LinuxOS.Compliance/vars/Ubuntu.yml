@@ -12,7 +12,7 @@
 # ========================================================================
 
 modprobe_package: 'kmod'
-use_rsync_deamon: 'rsync'
+rsync_deamon: 'rsync'
 
 # ------ old --- old --- old --- old ------
 
