@@ -21,7 +21,8 @@ udp_services:
 # the availability of the system.
 
 # -IMPORTANT---------------------------------------------------------------
-#         Partitions must be generated during OS installation!
+#           The Ansible script will not generate partitions!
+#          This must normally be done during OS installation!
 # ------------------------------------------------------------------------
 
 # Enable (true) if separate partitions are used.

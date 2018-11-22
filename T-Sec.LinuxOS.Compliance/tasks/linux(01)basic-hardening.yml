@@ -12,6 +12,7 @@
   service:
     name: rpcbind
     state: stopped
+  ignore_errors: yes
   when: not ansible_check_mode and
        ( disable_rpcbind and ansible_distribution_version == "14.04" )
 
@@ -39,7 +40,7 @@
        ( disable_rpcbind and ansible_distribution_version == "14.04" )
 
 - name: req-001.5 disable rsync (14.04)
-  shell: update-rc.d -f "{{ use_rsync_deamon }}" remove
+  shell: update-rc.d -f "{{ rsync_deamon }}" remove
   register: rsync_result
   changed_when: "'Removing' in rsync_result.stdout"
   failed_when: "'Removing' not in rsync_result.stdout"
@@ -129,7 +130,7 @@
   package:
     name: '{{ modprobe_package }}'
     state: present
-  when: config_filesystems and not ansible_check_mode
+  when: disable_filesystems and not ansible_check_mode
 
 - name: req-004.2 disable unused filesystems
   template:
@@ -138,7 +139,7 @@
     owner: root
     group: root
     mode: 0640
-  when: config_filesystems and not ansible_check_mode
+  when: disable_filesystems and not ansible_check_mode
 
 - block:
     - name: req-004.3 check for modprobe file
@@ -146,7 +147,7 @@
         path: '/etc/modprobe.d/disable.conf'
       register: check_file
       failed_when: check_file.stat.exists == false
-    - name: req-004.1 check modprobe file for unused filesystems
+    - name: req-004.4 check modprobe file for unused filesystems
       lineinfile:
         path: '/etc/modprobe.d/disable.conf'
         line: "install {{ item }} /bin/true"
@@ -645,21 +646,8 @@
 # Req 19:	Emerged vulnerabilities in software and hardware of a system must be
 # fixed or protected against misuse.
 
-- name: req-019.1 upgrade linux os (ubuntu)
-  apt:
-    upgrade: dist
-    update_cache: yes
-    cache_valid_time: 3600
-    force_apt_get: no
-  when: ansible_os_family == "Debian" and
-      ( do_system_upgrade and not ansible_check_mode)
-
-- name: req-019.2 upgrade linux os (redhat)
-  yum:
-    name: '*'
-    state: latest
-  when: ansible_os_family == "RedHat" and
-      ( do_system_upgrade and not ansible_check_mode)
+# System update must be done before security configuration. For this tasks
+# to update system is placed at the beginning in /tasks/main.yml.
 
 - name: req-019.3 update repository cache (ubuntu)
   apt:
@@ -905,7 +893,7 @@
   when: ansible_check_mode and config_mgmt_interface_ipv4
 
 - block:
-    - name: req-027.2 check if sshd is bind on ipv6 of mgmt interface
+    - name: req-028.2 check if sshd is bind on ipv6 of mgmt interface
       lineinfile:
         path: '/etc/ssh/sshd_config'
         line: "{{ item }}"
@@ -916,7 +904,7 @@
         - "ListenAddress {{mgmt_interface_ipv6}}"
   rescue:
     - debug:
-        msg: "Req-027 (2/2): FAILED"
+        msg: "Req-028 (2/2): FAILED"
   when: ansible_check_mode and
       ( config_ipv6_enable and config_mgmt_interface_ipv6)
 

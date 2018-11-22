@@ -2,7 +2,7 @@
 # File generated during automated hardening with Ansible
 
 {% if disable_filesystems %}
-{% for fs in list_filesystems %}
+{% for fs in filesystems %}
 install {{fs}} /bin/true
 {% endfor %}
 {% endif %}
