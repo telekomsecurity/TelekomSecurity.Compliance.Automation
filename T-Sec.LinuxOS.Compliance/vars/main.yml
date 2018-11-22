@@ -58,10 +58,13 @@ filesystems:
   - "udf"
   - "vfat"
 
-# Req 5:	Dedicated partitions must be used for growing content that can influence the availability of the system.
-# see /default/main.yml for variables for partitions
+# Req 5:	Dedicated partitions must be used for growing content that can
+# influence the availability of the system.
 
-# Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where this is applicable.
+# See /default/main.yml for variables for partitions.
+
+# Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where
+# this is applicable.
 config_partition_options: true
 options_tmp: "defaults,nosuid,nodev"
 options_vartmp: "defaults,nosuid,nodev,noexec"
@@ -173,56 +176,250 @@ buffer_overflow_protection:
 uninstall_prelink: true
 
 # Req 17:	IPv4 protocol stack must be securely configured.
+config_network_ipv4: true
+network_config_ipv4:
+
+  # Req 17 (1): IPv4 forwarding must be disabled.
+  net.ipv4.ip_forward: 0
+
+  # Req 17 (2): IPv4 redirects must not be accepted.
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.default.accept_redirects: 0
+
+  # Req 17 (3): Secure IPv4 redirects must not be accepted.
+  net.ipv4.conf.all.secure_redirects: 1
+  net.ipv4.conf.default.secure_redirects: 1
+
+  # Req 17 (4): IPv4 packet redirect sending must be disabled.
+  net.ipv4.conf.all.send_redirects: 0
+  net.ipv4.conf.default.send_redirects: 0
+
+  # Req 17 (5): IPv4 source routed packets must not be accepted.
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv4.conf.default.accept_source_route: 0
+
+  # Req 17 (6): Suspicious packets must be logged
+  net.ipv4.conf.all.log_martians: 1
+  net.ipv4.conf.default.log_martians: 1
+
+  # Req 17 (7): Broadcast ICMP requests must be ignored.
+  net.ipv4.icmp_echo_ignore_broadcasts: 1
+
+  # Req 17 (8): Bogus ICMP responses must be ignored.
+  net.ipv4.icmp_ignore_bogus_error_responses: 1
+
+  # Req 17 (9): Reverse Path Filtering must be enabled.
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.default.rp_filter: 1
+
+  # Req 17 (10): TCP SYN Cookies must be enabled.
+  net.ipv4.tcp_syncookies: 1
+
+  # Req 17 (11): An ICMP ratelimit must be configured.
+  net.ipv4.icmp_ratelimit: 100
+  net.ipv4.icmp_ratemask: 88089
+
+  # Req 17 (12): Timestamp must be disabled.
+  net.ipv4.tcp_timestamps: 0
+
+  # Req 17 (13): ARP must be restricted.
+  net.ipv4.conf.all.arp_ignore: 2
+  net.ipv4.conf.all.arp_announce: 2
+  net.ipv4.conf.all.arp_notify: 0
+  net.ipv4.conf.all.arp_accept: 0
+
+  # Req 17 (14): Shared media redirects must be accepted.
+  net.ipv4.conf.all.shared_media: 1
+  net.ipv4.conf.default.shared_media: 1
+
+  # Optional: Disable ICMP echo (ping). Default 0 (ping is allowed).
+  net.ipv4.icmp_echo_ignore_all: 0
+
 # Req 18:	IPv6 protocol stack must be securely configured.
-# Req 19:	Emerged vulnerabilities in software and hardware of a system must be fixed or protected against misuse.
-# Req 20: GPG check for repository server must be activated and corresponding keys for trustable repositories must be configured.
-# Req 21:	User accounts must be used that allow unambiguous identification of the user.
+network_config_ipv6_disabled:
+
+  # Req 18 (1): If not used IPv6 must be disabled completly.
+  net.ipv6.conf.all.disable_ipv6: 1
+  net.ipv6.conf.default.disable_ipv6: 1
+
+# Req 18: IPv6 protocol stack must securely configured.
+config_network_ipv6: true
+network_config_ipv6_enabled:
+
+  # Enables IPv6
+  net.ipv6.conf.all.disable_ipv6: 0
+  net.ipv6.conf.default.disable_ipv6: 0
+
+  # Req 18 (2): IPv6 forwarding must be disabled.
+  net.ipv6.conf.all.forwarding: 0
+  net.ipv6.conf.default.forwarding: 0
+
+  # Req 18 (3): IPv6 redirects must not be accepted.
+  net.ipv6.conf.all.accept_redirects: 0
+  net.ipv6.conf.default.accept_redirects: 0
+
+  # Req 18 (4): IPv6 source routed packets must not be accepted.
+  net.ipv6.conf.all.accept_source_route: 0
+  net.ipv6.conf.default.accept_source_route: 0
+
+  # Req 18 (5): IPv6 router advertisements must not be accepted.
+  net.ipv6.conf.all.accept_ra: 0
+  net.ipv6.conf.default.accept_ra: 0
+  net.ipv6.conf.all.accept_ra_rtr_pref: 0
+  net.ipv6.conf.default.accept_ra_rtr_pref: 0
+  net.ipv6.conf.all.accept_ra_pinfo: 0
+  net.ipv6.conf.default.accept_ra_pinfo: 0
+  net.ipv6.conf.all.accept_ra_defrtr: 0
+  net.ipv6.conf.default.accept_ra_defrtr: 0
+
+  # Req 18 (6): IPv6 router solicitations messages must not be accepted.
+  net.ipv6.conf.all.router_solicitations: 0
+  net.ipv6.conf.default.router_solicitations: 0
+
+  # Req 18 (7): IPv6 autoconfiguration must be disabled
+  net.ipv6.conf.all.autoconf: 0
+  net.ipv6.conf.default.autoconf: 0
+
+  # Req 18 (8): IPv6 neighbor solicitations must be disabled.
+  net.ipv6.conf.all.dad_transmits: 0
+  net.ipv6.conf.default.dad_transmits: 0
+
+# Req 19:	Emerged vulnerabilities in software and hardware of a system must be
+# fixed or protected against misuse.
+# Uses the variable 'do_system_upgrade' in /default/main.yml
+
+# Req 20: GPG check for repository server must be activated and corresponding
+# keys for trustable repositories must be configured.
+
+# Req 21:	User accounts must be used that allow unambiguous identification of
+# the user.
+
 # Req 22:	System accounts must be non-login.
-# Req 23:	User accounts must be protected against unauthorized usage by at least one authentication attribute.
-# Req 24:	User accounts with extensive rights must be protected with two authentication attributes.
+config_nologin_sys_accounts: true
+
+# Req 23:	User accounts must be protected against unauthorized usage by at least
+# one authentication attribute.
+config_user_without_pw: true
+
+# Req 24:	User accounts with extensive rights must be protected with two
+# authentication attributes.
+
 # Req 25:	The system must be connected to a central system for user administration.
+
 # Req 26:	Authentication must be used for single user mode.
-# Req 27: The management of the operating system must be done via a dedicated management network which is independent from the production network.
+config_single_user_mode: true
+# -- Note (Ubuntu only) --------------------------------------------------
+#    If you enable (true) the variable Ansible will set a random password
+#    for root. Disabling it (false) will skip complete requirement and your
+#    must set a complexe root password manualy.
+# ------------------------------------------------------------------------
+config_root_password: false
+
+# Req 27: The management of the operating system must be done via a dedicated
+# management network which is independent from the production network.
+
 # Req 28:	Management services must be bound to the management network.
-# Req 29: Encrypted protocols must be used for management access to administrate the operating system.
+
+# Req 29: Encrypted protocols must be used for management access to administrate
+# the operating system.
+
 # Req 30:	Logging must be enabled in bootloader configuration.
+
 # Req 31:	Log rotation for logfiles must be configured.
+
 # Req 32:	System time must be synchronized against a reference time source.
+
 # Req 33:	Auditd service must be used to log security relevant events.
+
 # Req 34:	System events must be logged.
+
 # Req 35:	Access and Authentication events must be logged.
+
 # Req 36:	Account and Group Management events must be logged.
+
 # Req 37:	Configuration Change events must be logged.
+
 # Req 38:	Auditd configuration must be immutable.
-# Req 39:	Security relevant logging data must be send to an external system direct after their creation.
-# Req 40:	If RSyslog is used, the default permission of 640 or more restrictive for logfiles must be configured.
-# Req 41:	If RSyslog is used, at least one central logging server must be configured.
-# Req 42:	If Syslog-NG is used, the default permission of 640 or more restrictive for logfiles must be configured.
-# Req 43:	If Syslog-NG is used, at least one central logging server must be configured.
-# Req 44:	If PAM is used, an appropriate hashing function must be configured for password protection for PAM.
-# Req 45:	If PAM is used, password rules must be configured for PAM to force the use of passwords with a minimum length of 8 characters and a combination of three out of the following categories: upper cases, lower case, numbers and special characters.
-# Req 46:	If PAM is used, a protection against brute force and dictionary attacks that hinder pass-word guessing must be configured in PAM.
-# Req 47:	If PAM is used , PAM must be configured that motd did not contain any sensitive data.
+
+# Req 39:	Security relevant logging data must be send to an external system direct
+# after their creation.
+
+# Req 40:	If RSyslog is used, the default permission of 640 or more restrictive
+# for logfiles must be configured.
+
+# Req 41:	If RSyslog is used, at least one central logging server must be
+# configured.
+
+# Req 42:	If Syslog-NG is used, the default permission of 640 or more restrictive
+# for logfiles must be configured.
+# Req 43:	If Syslog-NG is used, at least one central logging server must be
+# configured.
+
+# Req 44:	If PAM is used, an appropriate hashing function must be configured for
+# password protection for PAM.
+
+# Req 45:	If PAM is used, password rules must be configured for PAM to force the
+# use of passwords with a minimum length of 8 characters and a combination of
+# three out of the following categories: upper cases, lower case, numbers and
+# special characters.
+
+# Req 46:	If PAM is used, a protection against brute force and dictionary attacks
+# that hinder pass-word guessing must be configured in PAM.
+
+# Req 47:	If PAM is used , PAM must be configured that motd did not contain any
+# sensitive data.
+
 # Req 48:	If iptables is used, policies for loopback traffic must be configured.
-# Req 49:	If iptables is used, policies for outbound and established connections must be configured.
-# Req 50:	If iptables is used, policies must exist for all ports in listening state.
-# Req 51:	If iptables is used, the default policy must be configured to drop all traffic.
-# Req 52:	If a system has Internet facing services or is a virtualization host, a MAC solution must be used.
+
+# Req 49:	If iptables is used, policies for outbound and established connections
+# must be configured.
+
+# Req 50:	If iptables is used, policies must exist for all ports in listening
+# state.
+
+# Req 51:	If iptables is used, the default policy must be configured to drop
+# all traffic.
+
+# Req 52:	If a system has Internet facing services or is a virtualization host,
+# a MAC solution must be used.
+
 # Req 53:	If SELinux is used, it must not be disabled in bootloader configuration.
+
 # Req 54:	If SELinux is used, its state must be enforced.
+
 # Req 55:	If SELinux is used, the policy must be configured.
-# Req 56:	If SELinux is used, SETroubleshoot and MCS Translation Service must not be installed.
-# Req 57:	If SELinux is used, events must be logged if configuration of SELinux is modified.
+
+# Req 56:	If SELinux is used, SETroubleshoot and MCS Translation Service must
+# not be installed.
+
+# Req 57:	If SELinux is used, events must be logged if configuration of SELinux
+# is modified.
+
 # Req 58:	If AppArmor is used, it must not be disabled in bootloader configuration.
+
 # Req 59:	AppArmor is used, its state must be enforced.
-# Req 60:	If AppArmor is used, events must be logged if configuration of AppArmor is modified.
+
+# Req 60:	If AppArmor is used, events must be logged if configuration of AppArmor
+# is modified.
+
 # Req 61:	No legacy + entries must exist in files passwd, shadows and group.
-# Req 62	A user's home directory must be owned by the user and have mode 750 or more restric-tive.
+
+# Req 62	A user's home directory must be owned by the user and have mode 750 or
+# more restrictive.
+
 # Req 63:	Default group for the root account must be GID 0.
+
 # Req 64:	Root must be the only UID 0 account.
+
 # Req 65:	All groups in /etc/passwd must exist in /etc/group.
+
 # Req 66:	No duplicate UIDs and GIDs must exist.
+
 # Req 67:	No duplicate user and group names must exist.
+
 # Req 68: The shadow group must be empty (only Ubuntu Linux).
+
 # Req 69: No files and directories without assigned user or group must exist.
-# Req 70:	Permissions of security relevant configuration files must have the distribution default values or more restrictive.
+
+# Req 70:	Permissions of security relevant configuration files must have the
+# distribution default values or more restrictive.

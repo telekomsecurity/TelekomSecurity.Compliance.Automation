@@ -1,5 +1,21 @@
 ---
+# ------------------------------------------------------------------------
+# Telekom Security - Compliance Automation
+# Linux OS for Servers (3.65)
+# Variables
+# ------------------------------------------------------------------------
 
+# Stop playbook if Linux distro and version is not supported.
+- fail:
+    msg: "Your {{ansible_distribution}} version {{ ansible_distribution_version }} is not supported!"
+  when: (ansible_distribution != "Ubuntu" and ansible_os_family != "RedHat") or
+        (ansible_distribution == "CentOS" and ansible_distribution_major_version != "7") or
+        (ansible_distribution == "RedHat" and ansible_distribution_major_version != "7") or
+        (ansible_distribution == "Ubuntu" and ansible_distribution_version != "14.04") and
+        (ansible_distribution == "Ubuntu" and ansible_distribution_version != "16.04")
+        (ansible_distribution == "Ubuntu" and ansible_distribution_version != "18.04")
+
+# Read variables for detected OS from '/vars/<linux-os>.yml' files
 - name: read variables for detected os
   include_vars: "{{ item }}"
   with_first_found:
@@ -10,3 +26,27 @@
       skip: true
 
 - import_tasks: test.yml
+
+- name: 01 basic hardening
+  import_tasks: linux(01)basic-hardening.yml
+  tags: basic_hardening
+
+#- name: 02 logging
+#  import_tasks: linux(02)logging.yml
+#  tags: logging
+
+#- name: 03 logging
+#  import_tasks: linux(03)pam.yml
+#  tags: pam
+
+#- name: 04 iptables
+#  import_tasks: linux(04)iptables.yml
+#  tags: iptables
+
+#- name: 05 mac
+#  import_tasks: linux(05)mac.yml
+#  tags: mac
+
+#- name: 06 compliance checks
+#  import_tasks: linux(06)compliance_checks.yml
+#  tags: compliance_checks

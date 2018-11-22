@@ -13,6 +13,8 @@
 
 modprobe_package: 'kmod'
 rsync_deamon: 'rsync'
+uid_default: 999
+nologin_path: /usr/sbin/nologin
 
 # ------ old --- old --- old --- old ------
 
@@ -36,14 +38,7 @@ grub_update_tool: "update-grub"
 iptables_tools: 'iptables-persistent'
 
 
-# ---------------------------------
-# 04 Authentication & Authorization
-# ---------------------------------
 
-# Req 20: User accounts must be used that allow unambiguous identification
-# of the user.
-use_uid_max: 999
-use_nologin_path: /usr/sbin/nologin
 
 # Req 42: Permissions of security relevant configuration files must be
 # restricted.

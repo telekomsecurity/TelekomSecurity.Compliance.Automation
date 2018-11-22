@@ -13,6 +13,8 @@
 
 modprobe_package: 'module-init-tools'
 rsync_deamon: 'rsyncd'
+uid_default: 999
+nologin_path: /sbin/nologin
 
 # ------ old --- old --- old --- old ------
 
@@ -30,16 +32,6 @@ grub_update_tool: "grub2-mkconfig -o /boot/grub2/grub.cfg"
 
 # Req 2: The reachability of services must be restricted.
 iptables_tools: 'iptables-services'
-
-
-# ---------------------------------
-# 04 Authentication & Authorization
-# ---------------------------------
-
-# Req 20: User accounts must be used that allow unambiguous identification
-# of the user.
-use_uid_max: 999
-use_nologin_path: /sbin/nologin
 
 # Req 42: Permissions of security relevant configuration files must be
 # restricted.

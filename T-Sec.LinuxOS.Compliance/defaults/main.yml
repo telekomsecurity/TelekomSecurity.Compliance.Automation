@@ -5,6 +5,8 @@
 # Default Variables
 # ------------------------------------------------------------------------
 
+# Req 1: Unused services and protocols must be deactivated.
+
 # Needed TCP services that are used on system must be defined.
 tcp_services:
   - "22"
@@ -15,11 +17,14 @@ udp_services:
   - ""
   # - ""
 
+# Req 5:	Dedicated partitions must be used for growing content that can influence
+# the availability of the system.
+
 # -IMPORTANT---------------------------------------------------------------
 #         Partitions must be generated during OS installation!
 # ------------------------------------------------------------------------
 
-# Enable (true) the available partitions on your system.
+# Enable (true) if separate partitions are used.
 config_partitions: true
 partitions:
   - "tmp"
@@ -27,3 +32,35 @@ partitions:
   # - "/var/log" # instead of /var?
   # - "/var/tmp" # instead of /var?
   # - "/home"
+
+# Req 18:	IPv6 protocol stack must be securely configured.
+
+# Enable (true) if IPv6 is used.
+config_ipv6_enable: false
+
+# Req 19:	Emerged vulnerabilities in software and hardware of a system must be
+# fixed or protected against misuse.
+
+# Enable (true) if Ansible should do an update to current patch level.
+do_system_upgrade: true
+
+# Req 21:	User accounts must be used that allow unambiguous identification of
+# the user.
+
+# Set user name of account used to connect with Ansible.
+
+# <tbd>
+# Erlaubte User einbauen?
+user_name: ""
+
+# Req 27: The management of the operating system must be done via a dedicated
+# management network which is independent from the production network.
+
+# Enable (true) if a dedicated IPv4 management interface is used.
+config_mgmt_interface_ipv4: false
+# Define IPv4 address for mgmt interface.
+mgmt_interface_ipv4: "0.0.0.0"
+# Enable if (true) a dedicated IPv6 management interface is used.
+config_mgmt_interface_ipv6: false
+# Define IPv6 address for mgmt interface.
+mgmt_interface_ipv6: "::"

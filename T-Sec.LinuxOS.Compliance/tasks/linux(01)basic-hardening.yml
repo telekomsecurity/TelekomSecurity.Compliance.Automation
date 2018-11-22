@@ -174,7 +174,8 @@
         msg: "Req-004 (2/2): FAILED"
   when: disable_filesystems
 
-# Req 5:	Dedicated partitions must be used for growing content that can influence the availability of the system.
+# Req 5:	Dedicated partitions must be used for growing content that can
+# influence the availability of the system.
 
 - block:
     - name: req-005.1 check partitions
@@ -191,7 +192,8 @@
         msg: "Req-005 (1/1): FAILED"
   when: config_partitions and ansible_check_mode
 
-# Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where this is applicable.
+# Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where
+# this is applicable.
 # <tbd> Noch anpassen und testen
 
 #*	/dev/shm (RHEL, SLES) (nodev, nosuid, noexec)
@@ -588,40 +590,376 @@
   when: uninstall_prelink and ansible_os_family != "RedHat"
 
 # Req 17:	IPv4 protocol stack must be securely configured.
-# <tbd>
+
+- block:
+    - name: req-017.1 change sysctl-settings for ipv4
+      sysctl:
+        name: '{{ item.key }}'
+        value: '{{ item.value }}'
+        sysctl_set: yes
+        state: present
+        reload: yes
+      register: check_ipv4
+      failed_when: check_ipv4.changed and ansible_check_mode
+      with_dict: '{{ network_config_ipv4 }}'
+  rescue:
+    - debug:
+        msg: "Req-017 (1/1): FAILED"
+  when: config_network_ipv4
 
 # Req 18:	IPv6 protocol stack must be securely configured.
+
+- block:
+    - name: req-018.1 change sysctl-settings if ipv6 is disabled
+      sysctl:
+        name: '{{ item.key }}'
+        value: '{{ item.value }}'
+        sysctl_set: yes
+        state: present
+        reload: yes
+      register: check_ipv6
+      failed_when: check_ipv6.changed and ansible_check_mode
+      with_dict: '{{ network_config_ipv6_disabled }}'
+  rescue:
+    - debug:
+        msg: "Req-018 (1/1): FAILED"
+  when: config_network_ipv6 and not config_ipv6_enable
+
+- block:
+    - name: req-018.2 change sysctl-settings if ipv6 is enabled
+      sysctl:
+        name: '{{ item.key }}'
+        value: '{{ item.value }}'
+        sysctl_set: yes
+        state: present
+        reload: yes
+      register: check_ipv6
+      failed_when: check_ipv6.changed and ansible_check_mode
+      with_dict: '{{ network_config_ipv6_enabled }}'
+  rescue:
+    - debug:
+        msg: "Req-018 (1/1): FAILED"
+  when: config_network_ipv6 and
+     ( config_ipv6_enable or config_mgmt_interface_ipv6 )
+
+# Req 19:	Emerged vulnerabilities in software and hardware of a system must be
+# fixed or protected against misuse.
+
+- name: req-019.1 upgrade linux os (ubuntu)
+  apt:
+    upgrade: dist
+    update_cache: yes
+    cache_valid_time: 3600
+    force_apt_get: no
+  when: ansible_os_family == "Debian" and
+      ( do_system_upgrade and not ansible_check_mode)
+
+- name: req-019.2 upgrade linux os (redhat)
+  yum:
+    name: '*'
+    state: latest
+  when: ansible_os_family == "RedHat" and
+      ( do_system_upgrade and not ansible_check_mode)
+
+- name: req-019.3 update repository cache (ubuntu)
+  apt:
+    upgrade: no
+    update_cache: yes
+    cache_valid_time: 3600
+    force_apt_get: yes
+  register: cache_update
+  ignore_errors: yes
+  changed_when: false
+  when: ansible_os_family == "Debian" and ansible_check_mode
+
+- block:
+    - name: req-019.4 check if not installed updates available
+      shell: apt-get upgrade -s | awk '/upgraded,/ {print $1}'
+      args:
+        warn: false
+      register: open_updates
+      failed_when: open_updates.stdout != "0"
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "Req-019 (1/1): FAILED"
+  when: ansible_os_family == "Debian" and
+      ( cache_update.changed and ansible_check_mode )
+
+- block:
+    - name: req-019.5 check if not installed updates available
+      shell: yum check-update 2>/dev/null | grep -i "updates$" | wc -l
+      args:
+        warn: false
+      register: open_updates
+      failed_when: open_updates.stdout != "0"
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "Req-019 (1/1): FAILED"
+  when: ansible_os_family == "RedHat" and ansible_check_mode
+
+# Req 20: GPG check for repository server must be activated and corresponding
+# keys for trustable repositories must be configured.
 # <tbd>
 
-# Req 19:	Emerged vulnerabilities in software and hardware of a system must be fixed or protected against misuse.
-# <tbd>
+# Req 21:	User accounts must be used that allow unambiguous identification of
+# the user.
 
-# Req 20: GPG check for repository server must be activated and corresponding keys for trustable repositories must be configured.
-# <tbd>
+# Needed for Req 21 & 22: calculates UID_MIN from /etc/login.defs
+- name: get uid from file login.defs
+  shell: awk '/^\s*UID_MIN\s*([0-9]*).*?$/ {print $2}' /etc/login.defs
+  register: uid_min
+  changed_when: false
+  check_mode: no
 
-# Req 21:	User accounts must be used that allow unambiguous identification of the user.
-# <tbd>
+- name: calculate uid_max from uid_min
+  set_fact:
+    uid_max: '{{ uid_min.stdout | int - 1 }}'
+  changed_when: false
+  when: uid_min is defined
+
+- name: set uid_max if no login.defs exist
+  set_fact:
+    uid_max: "{{ uid_default }}"
+  changed_when: false
+  when: not uid_min
+
+- block:
+    - name: req-021.1 get all system accounts
+      shell: awk -F':' '{ if ( $1 != "{{ ansible_user }}" && $3 >= {{ uid_max }} && $7 != "{{ nologin_path }}" ) print $1 }' /etc/passwd
+      register: check_sys_accounts
+      changed_when: false
+      failed_when: check_sys_accounts.stdout != ""
+      check_mode: no
+  rescue:
+     - debug:
+        msg: "Req-021 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 22:	System accounts must be non-login.
-# <tbd>
 
-# Req 23:	User accounts must be protected against unauthorized usage by at least one authentication attribute.
-# <tbd>
+- block:
+    - name: req-022.1 check for system accounts with login
+      shell: awk -F':' '($1!="root" && $1!="sync" && $1!="shutdown" && $1!="halt" && $3<{{ uid_max }} && $7=="/bin/bash") {print $1}' /etc/passwd
+      register: check_sys_user
+      failed_when: check_sys_user.stdout != "" and ansible_check_mode
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "Req-022 (1/1): FAILED"
+  when: config_nologin_sys_accounts
 
-# Req 24:	User accounts with extensive rights must be protected with two authentication attributes.
-# <tbd>
+- name: req-022.2 disable login for system accounts
+  shell: /usr/sbin/usermod -s {{ nologin_path }} {{ item }}
+  with_items: "{{check_sys_user.stdout_lines}}"
+  when: config_nologin_sys_accounts and
+      ( check_sys_user.stdout != "" and not ansible_check_mode )
+
+# Req 23:	User accounts must be protected against unauthorized usage by at least
+# one authentication attribute.
+
+- block:
+    - name: req-022.0 check for user accounts without password
+      shell: awk -F":" '($2 == "" && $2 != "!" && $2 !="*") {print $1}' /etc/shadow
+      register: user_without_pw
+      failed_when: user_without_pw.stdout != "" and ansible_check_mode
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "Req-023 (1/1): FAILED"
+  when: config_user_without_pw
+
+- name: req-022.2 lock accounts without password
+  shell: passwd -l "{{ item }}"
+  with_items: "{{ user_without_pw.stdout_lines }}"
+  when: config_user_without_pw and
+      ( user_without_pw.stdout != "" and not ansible_check_mode )
+
+# Req 24:	User accounts with extensive rights must be protected with two
+# authentication attributes.
+
+- block:
+    - name: req-024.0 generate dummy failure message
+      fail:
+        msg: "Req 24 can not be checked automatically. Please do manual check!"
+  rescue:
+    - debug:
+        msg: "Req-024 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 25:	The system must be connected to a central system for user administration.
-# <tbd>
+
+- block:
+    - name: req-025.0 generate dummy failure message
+      fail:
+        msg: "Req 25 can not be checked automatically. Please do manual check!"
+  rescue:
+    - debug:
+        msg: "Req-025 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 26:	Authentication must be used for single user mode.
-# <tbd>
 
-# Req 27: The management of the operating system must be done via a dedicated management network which is independent from the production network.
-# <tbd>
+- block:
+    - name: req-26.1 check if root has a password set
+      shell: grep "^root:[*\!]:" /etc/shadow
+      register: check_root_pw
+      failed_when: check_root_pw.stdout != "" and ansible_check_mode
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "Req-026 (1/1): FAILED"
+  when: ansible_distribution == "Ubuntu" and
+      ( config_single_user_mode and config_root_password )
+
+- name: req-026.2 generate a secret root password
+  shell: date +%s | sha256sum | base64 | head -c 15 ; echo
+  register: root_password
+  changed_when: false
+  when:
+    - ansible_distribution == "Ubuntu"
+    - config_root_password
+    - check_root_pw.stdout != ""
+    - not ansible_check_mode
+
+- name: req-026.3 set root password
+  shell: printf "{{ root_password }}\n{{ root_password }}" | passwd root
+  changed_when: false
+  when:
+    - ansible_distribution == "Ubuntu"
+    - config_root_password
+    - check_root_pw.stdout != ""
+    - not ansible_check_mode
+
+- block:
+    - name: req-026.4 set single user mode
+      lineinfile:
+        dest: '{{ item }}'
+        state: present
+        regexp: '^ExecStart=*'
+        line: 'ExecStart=-/bin/sh -c "/usr/sbin/sulogin; /usr/bin/systemctl --fail --no-block default"'
+      register: check_sum
+      failed_when: check_sum.changed and ansible_check_mode
+      with_items:
+        - "/usr/lib/systemd/system/rescue.service"
+        - "/usr/lib/systemd/system/emergency.service"
+  rescue:
+    - debug:
+        msg: "Req-026 (1/1): FAILED"
+  when: ansible_os_family == "RedHat" and config_single_user_mode
+
+# Req 27: The management of the operating system must be done via a dedicated
+# management network which is independent from the production network.
+
+- block:
+    - name: req-027.1 check if management interface (ipv4) is enabled
+      fail:
+        msg: "Management interface for IPv4 is disabled."
+      when: config_mgmt_interface_ipv4 == false
+    - name: req-027.2 check if real IP address is set for mgmt
+      fail:
+        msg: "No IPv4 address is set for management interface."
+      when: config_mgmt_interface_ipv4 == true and
+            ( mgmt_interface_ipv4 == "0.0.0.0" or mgmt_interface_ipv4 == "" )
+  rescue:
+    - debug:
+        msg: "Req-027 (1/2): FAILED"
+  when: ansible_check_mode
+
+- block:
+    - name: req-027.3 check if management interface (ipv6) is enabled
+      fail:
+        msg: "Management interface for IPv6 is disabled."
+      when: config_mgmt_interface_ipv6 == false
+    - name: req-027.4 check if real IP address is set for mgmt
+      fail:
+        msg: "No IPv6 address is set for management interface."
+      when: config_mgmt_interface_ipv6 == true and
+            ( mgmt_interface_ipv6 == "::" or mgmt_interface_ipv6 == "" )
+  rescue:
+    - debug:
+        msg: "Req-027 (2/2): FAILED"
+  when: config_ipv6_enable and ansible_check_mode
 
 # Req 28:	Management services must be bound to the management network.
-# <tbd>
 
-# Req 29: Encrypted protocols must be used for management access to administrate the operating system.
-# <tbd>
+- block:
+    - name: req-028.1 check if sshd is bind on ipv4 of mgmt interface
+      lineinfile:
+        path: '/etc/ssh/sshd_config'
+        line: "{{ item }}"
+        state: present
+      register: check_ssh_mgmt_4
+      failed_when: (check_ssh_mgmt_4 is changed)
+      with_items:
+        - "ListenAddress {{mgmt_interface_ipv4}}"
+  rescue:
+    - debug:
+        msg: "Req-027 (1/2): FAILED"
+  when: ansible_check_mode and config_mgmt_interface_ipv4
+
+- block:
+    - name: req-027.2 check if sshd is bind on ipv6 of mgmt interface
+      lineinfile:
+        path: '/etc/ssh/sshd_config'
+        line: "{{ item }}"
+        state: present
+      register: check_ssh_mgmt_6
+      failed_when: (check_ssh_mgmt_6 is changed)
+      with_items:
+        - "ListenAddress {{mgmt_interface_ipv6}}"
+  rescue:
+    - debug:
+        msg: "Req-027 (2/2): FAILED"
+  when: ansible_check_mode and
+      ( config_ipv6_enable and config_mgmt_interface_ipv6)
+
+#<tbd>
+#- block:
+#    - name: req-027.3 check if ntp is bind on ipv4 of mgmt interface
+#      lineinfile:
+#        path: '/etc/ntp.conf'
+#        line: "server {{ item }}"
+#        state: present
+#      register: check_ntp_mgmt_4
+#      failed_when: (check_ntp_mgmt_4 is changed)
+#      with_items:
+#        - "interface listen {{mgmt_interface_ipv4}}"
+#  rescue:
+#    - debug:
+#        msg: "Req-027 (3/4): FAILED"
+#  when: check_ntp.changed == true and ntp_status.stat.exists == true
+
+#- block:
+#    - name: req-056.4 check if ntp is bind on ipv6 of mgmt interface
+#      lineinfile:
+#        path: '/etc/ntp.conf'
+#        line: "server {{ item }}"
+#        state: present
+#      register: check_ntp_mgmt_6
+#      failed_when: (check_ntp_mgmt_6 is changed)
+#      with_items:
+#        - "interface listen {{use_mgmt_interface_ipv6}}"
+#  rescue:
+#    - debug:
+#        msg: "Req-027 (4/4): FAILED"
+#  when: check_ntp.changed == true and
+#       (ntp_status.stat.exists == true and config_ipv6_enable == true)
+
+# Req 29: Encrypted protocols must be used for management access to administrate
+# the operating system.
+
+- block:
+    - name: req-029.0 generate dummy failure message
+      fail:
+        msg: "Req 29 can not be checked automatically. Please do manual check!"
+  rescue:
+    - debug:
+        msg: "Req-029 (1/1): FAILED"
+  when: ansible_check_mode

@@ -9,17 +9,53 @@
 - debug:
     msg: Distro Major Version "{{ ansible_distribution_major_version }}"
 
+# ---------------------------------------------------------------------
+
 - block:
-    - name: req-005.1 check partitions
-      lineinfile:
-        path: '/etc/fstab'
-        line: "{{item}} "
-        state: present
-      register: check_partitions
-      failed_when: check_partitions.changed
-      with_items:
-        - "{{ partitions }}"
+    - name: req-26.1 check if root has a password set
+      shell: grep "^root:[*\!]:" /etc/shadow
+      register: check_root_pw
+      failed_when: check_root_pw.stdout != "" and ansible_check_mode
+      changed_when: false
+      check_mode: no
   rescue:
     - debug:
-        msg: "Req-005 (1/1): FAILED"
-  when: config_partitions and ansible_check_mode
+        msg: "Req-026 (1/1): FAILED"
+  when: ansible_distribution == "Ubuntu" and
+      ( config_single_user_mode and config_root_password )
+
+- name: req-026.2 generate a secret root password
+  shell: date +%s | sha256sum | base64 | head -c 15 ; echo
+  register: root_password
+  changed_when: false
+  when:
+    - ansible_distribution == "Ubuntu"
+    - config_root_password
+    - check_root_pw.stdout != ""
+    - not ansible_check_mode
+
+- name: req-026.3 set root password
+  shell: printf "{{ root_password }}\n{{ root_password }}" | passwd root
+  changed_when: false
+  when:
+    - ansible_distribution == "Ubuntu"
+    - config_root_password
+    - check_root_pw.stdout != ""
+    - not ansible_check_mode
+
+- block:
+    - name: req-026.4 set single user mode
+      lineinfile:
+        dest: '{{ item }}'
+        state: present
+        regexp: '^ExecStart=*'
+        line: 'ExecStart=-/bin/sh -c "/usr/sbin/sulogin; /usr/bin/systemctl --fail --no-block default"'
+      register: check_sum
+      failed_when: check_sum.changed and ansible_check_mode
+      with_items:
+        - "/usr/lib/systemd/system/rescue.service"
+        - "/usr/lib/systemd/system/emergency.service"
+  rescue:
+    - debug:
+        msg: "Req-026 (1/1): FAILED"
+  when: ansible_os_family == "RedHat" and config_single_user_mode
