@@ -275,14 +275,12 @@ network_config_ipv6_enabled:
   # Req 18 (6): IPv6 router solicitations messages must not be accepted.
   net.ipv6.conf.all.router_solicitations: 0
   net.ipv6.conf.default.router_solicitations: 0
+  net.ipv6.conf.all.dad_transmits: 0
+  net.ipv6.conf.default.dad_transmits: 0
 
   # Req 18 (7): IPv6 autoconfiguration must be disabled
   net.ipv6.conf.all.autoconf: 0
   net.ipv6.conf.default.autoconf: 0
-
-  # Req 18 (8): IPv6 neighbor solicitations must be disabled.
-  net.ipv6.conf.all.dad_transmits: 0
-  net.ipv6.conf.default.dad_transmits: 0
 
 # Req 19:	Emerged vulnerabilities in software and hardware of a system must be
 # fixed or protected against misuse.
