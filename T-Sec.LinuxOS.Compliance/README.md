@@ -1,38 +1,107 @@
-Role Name
-=========
+# Telekom Security - Compliance Automation (Linux OS for Servers)
 
-A brief description of the role goes here. test
+Company: [T-systems International GmbH](https://www.t-systems.com)
 
-Requirements
-------------
+Author : [Markus Schumburg](mailto://security.automation@telekom.de)
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+Version: 0.9
 
-Role Variables
---------------
+Date   : 29. Nov 2018
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+-------------------------------------------------------------------------------
 
-Dependencies
-------------
+## Description
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+This Ansible role can be used to implement hardening of the Linux OS on
+servers. The hardening will be done following the security requirements
+from Telekom Security (see 'References' for used versions of document).
 
-Example Playbook
-----------------
+Note! It is an corresponding Ansible role available to check compliance
+      to security requirements from Telekom Security for Linux Server OS.
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+## Platforms
 
-License
--------
+The role is tested with the following Linux versions:
 
-BSD
+  * Ubuntu 14.04 LTS
+  * Ubuntu 16.04 LTS
+  * Ubuntu 18.04 LTS
+  * RedHat Enterprise Linux 7.x
+  * CentOS 7.x
+  * Oracle Linux 7.x
+  * Amazon Linux (AMI)
 
-Author Information
-------------------
+-------------------------------------------------------------------------------
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+**IMPORTANT:** This role only supports Linux versions for SERVERS! The role
+is not tested with desktop systems and can cause unexpected malfunctions.
+
+-------------------------------------------------------------------------------
+
+## Structure
+
+
+## Inventory
+
+Ansible by default uses the `/etc/ansible/hosts` file to specify hosts and
+needed parameters. To use your own 'hosts' file use
+
+```
+$ ansible-playbook -i <location-of-host-file> <playbook>.yml
+```
+
+This is fine for testing purposes. In case of productive environments a dynamic
+inventory triggered by the used orchestration should be used. For more
+information see:
+
+
+* http://docs.ansible.com/ansible/latest/intro_inventory.html
+* http://docs.ansible.com/ansible/latest/intro_dynamic_inventory.html
+
+
+## Variables
+
+
+## Execute
+
+Ansible is agent-free. This means no agent is needed on systems that should be
+configured with Ansible. But Ansible uses python. Python must be installed on
+systems to be managed with Ansible!
+
+Ansible uses SSH to connect to remote systems. To connect and to perform all
+tasks a user is needed on the system that should be hardened. This user needs
+root rights and must be a member of sudo group. Needed parameters for the user
+can be defined in inventory or playbook file.
+
+Check for user parameters:
+http://docs.ansible.com/ansible/latest/intro_inventory.html
+
+------------------------------------------------------------------------------
+
+**IMPORTANT:** Don't use user 'root' to execute this role. The role will disable
+local and remote login via SSH for user 'root'! Create your own user with root
+rights and sudo group membership.
+
+-------------------------------------------------------------------------------
+
+The default path to store roles is `/etc/ansible/roles`. In the file
+`/etc/ansible/ansible.cfg` with variable `roles_path` an own path can be
+specified.
+
+Start playbook with:
+
+```
+$ ansible-playbook <playbook>.yml
+```
+
+
+## References
+
+Telekom Security - Security Requirements:
+* SecReq 3.65: Linux OS for Servers
+
+## License
+
+Apache License, Version 2.0
+See file LICENSE

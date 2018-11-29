@@ -1,2 +1,12 @@
 ---
-# vars file for T-Sec.SSH.Compliance
+# ------------------------------------------------------------------------
+# Telekom Security - Compliance Automation
+# SSH (3.04)
+# Variables
+# ------------------------------------------------------------------------
+
+# =IMPORTANT==============================================================
+#
+#  Note: Changing variables in this file could affect security compliance!
+#
+# ========================================================================

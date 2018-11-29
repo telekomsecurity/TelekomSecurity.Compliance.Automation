@@ -1,8 +1,8 @@
 ---
 # ------------------------------------------------------------------------
 # Telekom Security - Compliance Automation
-# Linux OS for Servers (3.65)
-# Variables
+# SSH (3.04)
+# Specific Variables for Red Hat Enterprise Linux
 # ------------------------------------------------------------------------
 
 # =IMPORTANT==============================================================
@@ -10,3 +10,16 @@
 #  Note: Changing variables in this file could affect security compliance!
 #
 # ========================================================================
+
+# Do not change group sshd! Add only additional groups if
+# needed. Otherwise, you can't login afterwards!
+use_group_ssh: "sshd"
+
+# File: /etc/ssh/sshd_config
+sshd_conf_file: "/etc/ssh/sshd_config"
+sshd_conf_owner: "root"
+sshd_conf_group: "root"
+sshd_conf_mode: "og-rwx"
+
+# SSH
+sshd_service_name: sshd

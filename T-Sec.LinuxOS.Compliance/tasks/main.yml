@@ -2,7 +2,7 @@
 # ------------------------------------------------------------------------
 # Telekom Security - Compliance Automation
 # Linux OS for Servers (3.65)
-# Variables
+# Tasks
 # ------------------------------------------------------------------------
 
 # Stop playbook if Linux distro and version is not supported.
@@ -47,25 +47,34 @@
 #- import_tasks: test.yml
 
 - name: 01 basic hardening
+  include_vars: linux(01)basic-hardening.yml
   import_tasks: linux(01)basic-hardening.yml
+
+#- import_tasks: test.yml
+
   tags: basic_hardening
 
 #- name: 02 logging
+#  include_vars: linux(02)logging.yml
 #  import_tasks: linux(02)logging.yml
 #  tags: logging
 
 #- name: 03 logging
+#  include_vars: inux(03)pam.yml
 #  import_tasks: linux(03)pam.yml
 #  tags: pam
 
 #- name: 04 iptables
+#  include_vars: linux(04)iptables.yml
 #  import_tasks: linux(04)iptables.yml
 #  tags: iptables
 
 #- name: 05 mac
+#  include_vars: linux(05)mac.yml
 #  import_tasks: linux(05)mac.yml
 #  tags: mac
 
 #- name: 06 compliance checks
+#  include_vars: linux(06)compliance_checks.yml
 #  import_tasks: linux(06)compliance_checks.yml
 #  tags: compliance_checks

@@ -1,5 +1,4 @@
 ---
-
 # ------------------------------------------------------------------------
 # Telekom Security - Compliance Automation
 # Linux OS for Servers (3.65)
@@ -19,7 +18,7 @@
 - name: req-001.2 disable rpcbind (14.04)
   shell: update-rc.d -f rpcbind remove
   register: rpcbind_result
-  changed_when: "'Removing' in rpcbind_result.stdout"
+  changed_when: false
   failed_when: "'Removing' not in rpcbind_result.stdout"
   when: not ansible_check_mode and
        ( disable_rpcbind and ansible_distribution_version == "14.04" )
@@ -29,8 +28,9 @@
     name: rpcbind
     state: stopped
     enabled: no
-  when: not ansible_check_mode and
-       ( disable_rpcbind and ansible_distribution == "CentOS" )
+  ignore_errors: yes
+  when: not ansible_check_mode and disable_rpcbind
+      ( disable_rpcbind and ansible_distribution_version != "14.04" )
 
 - name: req-001.4 stop rsync (14.04)
   service:
@@ -42,7 +42,7 @@
 - name: req-001.5 disable rsync (14.04)
   shell: update-rc.d -f "{{ rsync_deamon }}" remove
   register: rsync_result
-  changed_when: "'Removing' in rsync_result.stdout"
+  changed_when: false
   failed_when: "'Removing' not in rsync_result.stdout"
   when: not ansible_check_mode and
        ( disable_rsync and ansible_distribution_version == "14.04" )
@@ -94,7 +94,14 @@
   when: ansible_check_mode
 
 # Req 2: The reachability of services must be restricted.
-#<tbd> prüfen ob ssh eingeschränkt ist und/oder ip tables installiert und konfiguriert ist.
+- block:
+    - name: req-002.0 generate dummy failure message
+      fail:
+        msg: "Req 2 can not be checked automatically. Please do manual check!"
+  rescue:
+    - debug:
+        msg: "Req-002 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 3: Unused software must not be installed or must be uninstalled.
 
@@ -195,85 +202,15 @@
 
 # Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where
 # this is applicable.
-# <tbd> Noch anpassen und testen
 
-#*	/dev/shm (RHEL, SLES) (nodev, nosuid, noexec)
-#*	/run/shm (Ubuntu) (nodev, nosuid, noexec)
-
-#- block:
-#    - name: req-010.1 check options for partition /tmp
-#      lineinfile:
-#        path: '/etc/fstab'
-#        backrefs: yes
-#        state: present
-#        regexp: '(^UUID=[\w=/\-\.]+\s/tmp\s+.*\s+)defaults(.*)$'
-#        line: '\1{{ use_partition_options }}\2'
-#      register: check_tmp_options
-#      failed_when: (check_tmp_options is changed)
-#  rescue:
-#    - debug:
-#        msg: "Req-006 (x/x): FAILED"
-#  when: check_tmp.changed == false
-
-#- block:
-#    - name: req-010.2 set options for partition /var
-#      lineinfile:
-#        path: '/etc/fstab'
-#        backrefs: yes
-#        state: present
-#        regexp: '(^UUID=[\w=/\-\.]+\s/var\s+.*\s+)defaults(.*)$'
-#        line: '\1{{ use_partition_options }}\2'
-#      register: check_var_options
-#      failed_when: (check_var_options is changed)
-#  rescue:
-#    - debug:
-#        msg: "Req-006 (x/x): FAILED"
-#  when: check_var.changed == false
-
-#- block:
-#    - name: req-010.3 set options for partition /var/tmp
-#      lineinfile:
-#        path: '/etc/fstab'
-#        backrefs: yes
-#        state: present
-#        regexp: '(^UUID=[\w=/\-\.]+\s/var/tmp\s+.*\s+)defaults(.*)$'
-#        line: '\1{{ use_partition_options }}\2'
-#      register: check_var_tmp_options
-#      failed_when: (check_var_tmp_options is changed)
-#  rescue:
-#    - debug:
-#        msg: "Req-006 (x/x): FAILED"
-#  when: check_var_tmp.changed == false
-
-#- block:
-#    - name: req-010.4 set options for partition /var/log
-#      lineinfile:
-#        path: '/etc/fstab'
-#        backrefs: yes
-#        state: present
-#        regexp: '(^UUID=[\w=/\-\.]+\s/var/log\s+.*\s+)defaults(.*)$'
-#        line: '\1{{ use_partition_options }}\2'
-#      register: check_var_log_options
-#      failed_when: (check_var_log_options is changed)
-#  rescue:
-#    - debug:
-#        msg: "Req-006 (x/x): FAILED"
-#  when: check_var_log.changed == false
-
-#- block:
-#    - name: req-010.5 set options for partition /home
-#      lineinfile:
-#        path: '/etc/fstab'
-#        backrefs: yes
-#        state: present
-#        regexp: '(^UUID=[\w=/\-\.]+\s/home\s+.*\s+)defaults(.*)$'
-#        line: '\1{{ use_partition_options }}\2'
-#      register: check_home_options
-#      failed_when: (check_home_options is changed)
-#  rescue:
-#    - debug:
-#        msg: "Req-006 (x/x): FAILED"
-#  when: check_home.changed == false
+- block:
+    - name: req-006.0 generate dummy failure message
+      fail:
+        msg: "Req 6 can not be checked automatically. Please do manual check!"
+  rescue:
+    - debug:
+        msg: "Req-006 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 7:	Automounting must be disabled.
 
@@ -691,7 +628,15 @@
 
 # Req 20: GPG check for repository server must be activated and corresponding
 # keys for trustable repositories must be configured.
-# <tbd>
+
+- block:
+    - name: req-020.0 generate dummy failure message
+      fail:
+        msg: "Req 20 can not be checked automatically. Please do manual check!"
+  rescue:
+    - debug:
+        msg: "Req-020 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 21:	User accounts must be used that allow unambiguous identification of
 # the user.
