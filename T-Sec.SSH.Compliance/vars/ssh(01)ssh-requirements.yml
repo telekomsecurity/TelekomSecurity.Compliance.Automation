@@ -17,7 +17,7 @@ ssh_server_ports:
 
 # Req 1:	The SSH protocol version 2 must be used.
 # Obsolet with OpenSSH version 7.4 or later
-ssh_version: 1
+ssh_version: 2
 
 # Req 2:	SSH moduli smaller than 2048 must not be used.
 moduli_minimum: 2048

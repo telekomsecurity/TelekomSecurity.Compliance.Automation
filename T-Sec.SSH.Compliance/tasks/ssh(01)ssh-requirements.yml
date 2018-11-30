@@ -8,21 +8,20 @@
 # --- Hardening ---------------------------------------------------------------
 
 # Req 1:	The SSH protocol version 2 must be used.
-# No configuration necessary - OpenSSH 7.4 or later did not support SSHv1!
-
 # Req 2:	SSH moduli smaller than 2048 must not be used.
 
-- name: req-058.1 check if /etc/ssh/moduli for short values
-  shell: awk '$5 < {{ use_moduli_minimum }}' /etc/ssh/moduli
+- name: req-002.1 check if /etc/ssh/moduli for short values
+  shell: awk '$5 < {{ moduli_minimum }}' /etc/ssh/moduli
   register: ssh_moduli
   changed_when: false
-  when: config_ssh_server == true
+  when: config_ssh_server and not ansible_check_mode
 
-- name: req-058.2 remove all primes smaller than defined value
-  shell: awk '$5 >= {{ use_moduli_minimum }}' /etc/ssh/moduli > /etc/ssh/moduli.new ;
+- name: req-002.1 remove all primes smaller than defined value
+  shell: awk '$5 >= {{ moduli_minimum }}' /etc/ssh/moduli > /etc/ssh/moduli.new ;
          [ -r /etc/ssh/moduli.new -a -s /etc/ssh/moduli.new ] && mv /etc/ssh/moduli.new /etc/ssh/moduli || true
   notify: restart sshd
-  when: config_ssh_server == true and ssh_moduli.stdout != ""
+  when: config_ssh_server and
+        ( not ansible_check_mode and ssh_moduli.stdout != "")
 
 # Req 3:	Only approved key exchange algorithms must be used.
 # Req 4:	Only approved ciphers algorithms must be used.
@@ -48,7 +47,7 @@
 # Req 23:	SSH PermitEmptyPasswords must be disabled.
 # Req 24:	If SFTP is activated, internal server of OpenSSH must be used.
 
-- name: req-058-078.0 set configuration for sshd
+- name: req-024.1 set configuration for sshd (req 1, 3 - 24)
   template:
     src: 'sshdconfig.j2'
     dest: '{{ sshd_conf_file }}'
@@ -56,423 +55,469 @@
     group: "{{ sshd_conf_group }}"
     mode: "{{ sshd_conf_mode }}"
   notify: restart sshd
-  when: not not ansible_check_mode
+  when: config_ssh_server and not ansible_check_mode
 
-- name: req-078.0 generate sftp group
+- name: req-024.2 generate sftp group
   group:
-    name: "{{ use_sftp_group }}"
+    name: "{{ sftp_group }}"
     state: present
-  notify: restart sshd
-  when: config_ssh_server == true and set_sftp_chroot == true
+  when: config_ssh_server and
+       ( set_sftp_chroot and not ansible_check_mode )
 
 # --- Compliance Check---------------------------------------------------------
 # Req 1:	The SSH protocol version 2 must be used.
 
+- block:
+    - name: req-001.1 check ssh version
+      lineinfile:
+        path: '/etc/ssh/sshd_config'
+        line: "Protocol {{ssh_version}}"
+        state: present
+      register: check_ssh_ver
+      failed_when: check_ssh_ver.changed
+  rescue:
+    - debug:
+        msg: "Req-001 (1/1): FAILED"
+  when: ansible_check_mode
+
 # Req 2:	SSH moduli smaller than 2048 must not be used.
 
 - block:
-    - name: req-058.0 check if /etc/ssh/moduli are correct
-      shell: awk '$5 < {{ use_moduli_minimum }}' /etc/ssh/moduli | wc -l
+    - name: req-002.1 check if /etc/ssh/moduli are correct
+      shell: awk '$5 < {{ moduli_minimum }}' /etc/ssh/moduli | wc -l
       register: check_ssh_moduli
       failed_when: check_ssh_moduli.stdout != "0"
       changed_when: false
       check_mode: no
   rescue:
     - debug:
-        msg: "WARNING: SSH moduli found smaller than {{ use_moduli_minimum }}!"
+        msg: "Req-002 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 3:	Only approved key exchange algorithms must be used.
 
 - block:
-    - name: req-059.1 check ssh ciphers
+    - name: req-003.1 check ssh ciphers
       shell: cat /etc/ssh/sshd_config | grep {{ item }} | wc -l
       register: check_ssh_chiphers
       failed_when: check_ssh_chiphers.stdout == "0"
       changed_when: false
       check_mode: no
-      with_items: "{{ use_ssh_ciphers }}"
+      with_items: "{{ ssh_ciphers }}"
   rescue:
     - debug:
-        msg: "WARNING: SSH crypto ciphers configuration is incorrect!"
+        msg: "Req-003 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 4:	Only approved ciphers algorithms must be used.
 
 - block:
-    - name: req-059.2 check ssh key exchange
+    - name: req-004.1 check ssh key exchange
       shell: cat /etc/ssh/sshd_config | grep {{ item }} | wc -l
       register: check_ssh_kex
       failed_when: check_ssh_kex.stdout == "0"
       changed_when: false
       check_mode: no
-      with_items: " {{ use_ssh_key_ex }}"
+      with_items: "{{ ssh_key_ex }}"
   rescue:
     - debug:
-        msg: "WARNING: SSH crypto key exchange configuration is incorrect!"
+        msg: "Req-004 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 5:	Only approved MAC algorithms must be used.
 
 - block:
-    - name: req-060.0 check ssh mac algorithms
+    - name: req-005.1 check ssh mac algorithms
       shell: cat /etc/ssh/sshd_config | grep {{ item }} | wc -l
       register: check_ssh_macs
       failed_when: check_ssh_macs.stdout == "0"
       changed_when: false
       check_mode: no
-      with_items: "{{ use_ssh_macs }}"
+      with_items: "{{ ssh_macs }}"
   rescue:
     - debug:
-        msg: "WARNING: SSH mac algorithms configuration is incorrect!"
+        msg: "Req-005 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 6:	SSH logging must be enabled.
 
 - block:
-    - name: req-061.0 check ssh logging
+    - name: req-006.1 check ssh logging
       lineinfile:
         path: '/etc/ssh/sshd_config'
         line: "{{ item }}"
         state: present
       register: check_ssh_log
-      failed_when: (check_ssh_log is changed)
+      failed_when: check_ssh_log.changed
       with_items:
-        - "SyslogFacility {{use_ssh_syslogfacility}}"
-        - "LogLevel {{use_ssh_loglevel}}"
+        - "SyslogFacility {{ssh_syslogfacility}}"
+        - "LogLevel {{ssh_loglevel}}"
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for logging is not correct!"
+        msg: "Req-006 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 7:	SSH LoginGraceTime must be set to one minute or less.
 
 - block:
-    - name: req-062.0 check ssh logingracetime configuration
+    - name: req-007.1 check ssh logingracetime configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "LoginGraceTime {{use_login_grace_time}}"
+        line: "LoginGraceTime {{login_grace_time}}"
         state: present
       register: check_ssh_lgt
-      failed_when: (check_ssh_lgt is changed)
+      failed_when: check_ssh_lgt.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for LoginGraceTime is not correct!"
+        msg: "Req-007 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 8:	SSH MaxAuthTries must be set to 5 or less.
 
 - block:
-    - name: req-063.0 check ssh maxauthtries configuration
+    - name: req-008.1 check ssh maxauthtries configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
         line: "{{ item }}"
         state: present
       register: check_ssh_mat
-      failed_when: (check_ssh_mat is changed)
+      failed_when: check_ssh_mat.changed
       with_items:
-        - "MaxAuthTries {{use_max_auth_tries}}"
-        - "MaxSessions {{use_max_sessions}}"
-        - "MaxStartups {{use_max_startups}}"
+        - "MaxAuthTries {{max_auth_tries}}"
+        - "MaxSessions {{max_sessions}}"
+        - "MaxStartups {{max_startups}}"
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for MaxAuthTries is not correct!"
+        msg: "Req-008 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 9:	SSH root login must be disabled.
 
 - block:
-    - name: req-064.0 check root login for is disabled
+    - name: req-009.1 check root login for is disabled
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "PermitRootLogin {{ 'without-password' if (use_allow_root_login|bool) else 'no' }}"
+        line: "PermitRootLogin {{ 'without-password' if (allow_root_login|bool) else 'no' }}"
         state: present
       register: check_ssh_root_login
-      failed_when: (check_ssh_root_login is changed)
+      failed_when: check_ssh_root_login.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for root login is not correct!"
+        msg: "Req-009 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 10:	SSH strict mode must be enabled.
 
 - block:
-    - name: req-065.0 check ssh configuration
+    - name: req-010.1 check ssh configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "StrictModes {{ 'yes' if (use_strict_mode|bool) else 'no' }}"
+        line: "StrictModes {{ 'yes' if (strict_mode|bool) else 'no' }}"
         state: present
       register: check_ssh_strict
-      failed_when: (check_ssh_strict is changed)
+      failed_when: check_ssh_strict.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for strict mode is not correct!"
+        msg: "Req-010 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 11:	SSH user authentication must be done with public keys.
 
 - block:
-    - name: req-066.0 check ssh user authentication
+    - name: req-011.1 check ssh user authentication
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "PubkeyAuthentication {{ 'yes' if (use_pubkey_auth|bool) else 'no' }}"
+        line: "PubkeyAuthentication {{ 'yes' if (pubkey_auth|bool) else 'no' }}"
         state: present
       register: check_ssh_user_auth
-      failed_when: (check_ssh_user_auth is changed)
+      failed_when: check_ssh_user_auth.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for user authentication is not correct!"
+        msg: "Req-011 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 12:	SSH password authentication must be disabled.
 
 - block:
-    - name: req-067.0 check ssh if password authentication is disabled
+    - name: req-012.1 check ssh if password authentication is disabled
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "PubkeyAuthentication {{ 'yes' if (use_pubkey_auth|bool) else 'no' }}"
+        line: "PubkeyAuthentication {{ 'yes' if (pubkey_auth|bool) else 'no' }}"
         state: present
       register: check_ssh_password_auth
-      failed_when: (check_ssh_password_auth is changed)
+      failed_when: check_ssh_password_auth.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for root login is not correct!"
+        msg: "Req-012 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 13:	SSH IgnoreRhosts must be enabled.
 
 - block:
-    - name: req-068.0 check ssh ignorerhosts configuration
+    - name: req-013.1 check ssh ignorerhosts configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "IgnoreRhosts {{ 'yes' if (use_ignore_rhosts|bool) else 'no' }}"
+        line: "IgnoreRhosts {{ 'yes' if (ignore_rhosts|bool) else 'no' }}"
         state: present
       register: check_ssh_ignore_hosts
-      failed_when: (check_ssh_ignore_hosts is changed)
+      failed_when: check_ssh_ignore_hosts.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for IgnoreRhosts is not correct!"
+        msg: "Req-013 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 14:	SSH HostbasedAuthentication must be disabled.
 
 - block:
-    - name: req-069.0 check ssh host based authentication configuration
+    - name: req-014.1 check ssh host based authentication configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
         line: "{{ item }}"
         state: present
       register: check_ssh_hba
-      failed_when: (check_ssh_hba is changed)
+      failed_when: check_ssh_hba.changed
       with_items:
-        - "HostbasedAuthentication {{ 'yes' if (use_host_based_auth|bool) else 'no' }}"
-        - "IgnoreUserKnownHosts {{ 'yes' if (use_ignore_known_hosts|bool) else 'no' }}"
+        - "HostbasedAuthentication {{ 'yes' if (host_based_auth|bool) else 'no' }}"
+        - "IgnoreUserKnownHosts {{ 'yes' if (ignore_known_hosts|bool) else 'no' }}"
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for HostbasedAuthentication is not correct!"
+        msg: "Req-014 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 15:	The usage of the SSH service must be restricted to dedicated groups
   # or users.
 
 - block:
-    - name: req-070.1 check ssh configuration for pam use
+    - name: req-015.1 check ssh configuration for pam use
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "UsePAM {{ 'yes' if (use_pam_for_ssh|bool) else 'no' }}"
+        line: "UsePAM {{ 'yes' if (pam_for_ssh|bool) else 'no' }}"
         state: present
       register: check_ssh_pam
-      failed_when: (check_ssh_pam is changed)
+      failed_when: check_ssh_pam.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for ssh pam use is not correct!"
+        msg: "Req-015 (1/5): FAILED"
+  when: ansible_check_mode
 
 - block:
-    - name: req-070.2 check ssh configuration for deny users
+    - name: req-015.2 check ssh configuration for deny users
       lineinfile:
         path: '/etc/ssh/sshd_config'
         line: "DenyUsers {{ssh_deny_users}}"
         state: present
       register: check_ssh_deny_users
-      failed_when: (check_ssh_deny_users is changed)
+      failed_when: check_ssh_deny_users.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for deny users is not correct!"
-  when: ssh_deny_users != ""
+        msg: "Req-015 (2/5): FAILED"
+  when: ansible_check_mode and ssh_deny_users != ""
 
 - block:
-    - name: req-070.3 check ssh configuration for allow user
+    - name: req-015.3 check ssh configuration for allow user
       lineinfile:
         path: '/etc/ssh/sshd_config'
         line: "AllowUsers {{ssh_allow_users}}"
         state: present
       register: check_ssh_allow_users
-      failed_when: (check_ssh_allow_users is changed)
+      failed_when: check_ssh_allow_users.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for allow users is not correct!"
-  when: ssh_allow_users != ""
+        msg: "Req-015 (3/5): FAILED"
+  when: ansible_check_mode and ssh_allow_users != ""
 
 - block:
-    - name: req-070.4 check ssh configuration for deny groups
+    - name: req-015.4 check ssh configuration for deny groups
       lineinfile:
         path: '/etc/ssh/sshd_config'
         line: "DenyGroups {{ssh_deny_groups}}"
         state: present
       register: check_ssh_deny_groups
-      failed_when: (check_ssh_deny_groups is changed)
+      failed_when: check_ssh_deny_groups.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for deny groups is not correct!"
-  when: ssh_deny_groups != ""
+        msg: "Req-015 (4/5): FAILED"
+  when: ansible_check_mode and ssh_deny_groups != ""
 
 - block:
-    - name: req-070.5 check ssh configuration for allow groups
+    - name: req-015.5 check ssh configuration for allow groups
       lineinfile:
         path: '/etc/ssh/sshd_config'
         line: "AllowGroups {{ssh_allow_groups}}"
         state: present
       register: check_ssh_allow_groups
-      failed_when: (check_ssh_allow_groups is changed)
+      failed_when: check_ssh_allow_groups.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for allow groups is not correct!"
-  when: ssh_allow_groups != ""
+        msg: "Req-015 (5/5): FAILED"
+  when: ansible_check_mode and ssh_allow_groups != ""
 
 # Req 16:	The SSH Idle Timeout Interval must be configured to an adequate time.
 
 - block:
-    - name: req-071.0 check ssh idle timeout configuration
+    - name: req-016.1 check ssh idle timeout configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
         line: "{{ item }}"
         state: present
       register: check_ssh_idle
-      failed_when: (check_ssh_idle is changed)
+      failed_when: check_ssh_idle.changed
       with_items:
-        - "TCPKeepAlive {{ 'yes' if (use_tcp_keepalive|bool) else 'no' }}"
-        - "ClientAliveInterval {{use_client_alive_interval}}"
-        - "ClientAliveCountMax {{use_client_alive_count}}"
+        - "TCPKeepAlive {{ 'yes' if (tcp_keepalive|bool) else 'no' }}"
+        - "ClientAliveInterval {{client_alive_interval}}"
+        - "ClientAliveCountMax {{client_alive_count}}"
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for Idle Timeout is not correct!"
+        msg: "Req-016 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 17:	SSH tunnel devices must be disabled.
 
 - block:
-    - name: req-072.0 check ssh tunnel devices configuration
+    - name: req-017.1 check ssh tunnel devices configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "PermitTunnel {{ 'yes' if (use_permit_tunnel|bool) else 'no' }}"
+        line: "PermitTunnel {{ 'yes' if (permit_tunnel|bool) else 'no' }}"
         state: present
       register: check_ssh_tunnel
-      failed_when: (check_ssh_tunnel is changed)
+      failed_when: check_ssh_tunnel.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for tunnel devices is not correct!"
+        msg: "Req-017 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 18:	SSH TCP port forwarding must be disabled.
 
 - block:
-    - name: req-073.0 check ssh tcp port forwarding configuration
+    - name: req-018.1 check ssh tcp port forwarding configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "AllowTcpForwarding {{ 'yes' if (use_allow_tcp_forwarding|bool) else 'no' }}"
+        line: "AllowTcpForwarding {{ 'yes' if (allow_tcp_forwarding|bool) else 'no' }}"
         state: present
       register: check_tcp_forward
-      failed_when: (check_tcp_forward is changed)
+      failed_when: check_tcp_forward.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for TCP port forwarding  is not correct!"
+        msg: "Req-018 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 19:	SSH agent forwarding must be disabled.
 
 - block:
-    - name: req-074.0 check ssh agent forwarding configuration
+    - name: req-019.1 check ssh agent forwarding configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "AllowAgentForwarding {{ 'yes' if (use_allow_agent_forwarding|bool) else 'no' }}"
+        line: "AllowAgentForwarding {{ 'yes' if (allow_agent_forwarding|bool) else 'no' }}"
         state: present
       register: check_ssh_agent_forward
-      failed_when: (check_ssh_agent_forward is changed)
+      failed_when: check_ssh_agent_forward.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for agent forwarding  is not correct!"
+        msg: "Req-019 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 20:	SSH gateway ports must be disabled.
 
 - block:
-    - name: req-075.0 check ssh gateway ports configuration
+    - name: req-020.1 check ssh gateway ports configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "GatewayPorts {{ 'yes' if (use_gw_ports|bool) else 'no' }}"
+        line: "GatewayPorts {{ 'yes' if (gw_ports|bool) else 'no' }}"
         state: present
       register: check_ssh_gw_ports
-      failed_when: (check_ssh_gw_ports is changed)
+      failed_when: check_ssh_gw_ports.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for gateway ports is not correct!"
+        msg: "Req-020 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 21:	SSH X11 forwarding must be disabled.
 
 - block:
-    - name: req-076.0 check ssh x11 forwarding configuration
+    - name: req-021.1 check ssh x11 forwarding configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "X11Forwarding {{ 'yes' if (use_x11_forwarding|bool) else 'no' }}"
+        line: "X11Forwarding {{ 'yes' if (x11_forwarding|bool) else 'no' }}"
         state: present
       register: check_ssh_x11
-      failed_when: (check_ssh_x11 is changed)
+      failed_when: check_ssh_x11.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for X11 forwarding is not correct!"
+        msg: "Req-021 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 22:	SSH PermitUserEnvironment must be disabled.
 
 - block:
-    - name: req-077.0 check ssh permit user enviroment configuration
+    - name: req-022.1 check ssh permit user enviroment configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "PermitUserEnvironment {{ 'yes' if (use_permit_user_env|bool) else 'no' }}"
+        line: "PermitUserEnvironment {{ 'yes' if (permit_user_env|bool) else 'no' }}"
         state: present
       register: check_ssh_user_env
-      failed_when: (check_ssh_user_env is changed)
+      failed_when: check_ssh_user_env.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for PermitUserEnvironment is not correct!"
+        msg: "Req-022 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 23:	SSH PermitEmptyPasswords must be disabled.
-# <tbd> fehlt
+
+- block:
+    - name: req-023.0 check ssh permit empty passowrd configuration
+      lineinfile:
+        path: '/etc/ssh/sshd_config'
+        line: "PermitEmptyPasswords {{ 'yes' if (permit_empty_pw|bool) else 'no' }}"
+        state: present
+      register: check_ssh_empty_pw
+      failed_when: check_ssh_empty_pw.changed
+  rescue:
+    - debug:
+        msg: "Req-023 (1/1): FAILED"
+  when: ansible_check_mode
 
 # Req 24:	If SFTP is activated, internal server of OpenSSH must be used.
 
 - block:
-    - name: req-078.1 check sftp configuration
+    - name: req-024.1 check sftp configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
-        line: "Subsystem sftp internal-sftp -l {{ use_sftp_logging }}"
+        line: "Subsystem sftp internal-sftp -l {{ sftp_logging }}"
         state: present
       register: check_sftp
-      failed_when: (check_sftp is changed)
+      failed_when: check_sftp.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH configuration for sftp is not correct!"
-  when: set_sftp_enabled == true
+        msg: "Req-024 (1/3): FAILED"
+  when: ansible_check_mode and set_sftp_enabled
 
 - block:
-    - name: req-78.2 check sftp configuration
+    - name: req-024.2 check sftp configuration
       lineinfile:
         path: '/etc/ssh/sshd_config'
         line: "{{ item }}"
         state: present
       register: check_sftp_chroot
-      failed_when: (check_sftp_chroot is changed)
+      failed_when: check_sftp_chroot.changed
       with_items:
-        - "AllowTcpForwarding {{ 'yes' if (use_sftp_tcp_forwarding|bool) else 'no' }}"
-        - "AllowAgentForwarding {{ 'yes' if (use_sftp_agent_forwarding|bool) else 'no' }}"
-        - "PasswordAuthentication {{ 'yes' if (use_sftp_password_auth|bool) else 'no' }}"
-        - "PermitRootLogin {{ 'yes' if (use_sftp_root_login|bool) else 'no' }}"
-        - "X11Forwarding {{ 'yes' if (use_sftp_x11_forwardning|bool) else 'no' }}"
+        - "AllowTcpForwarding {{ 'yes' if (sftp_tcp_forwarding|bool) else 'no' }}"
+        - "AllowAgentForwarding {{ 'yes' if (sftp_agent_forwarding|bool) else 'no' }}"
+        - "PasswordAuthentication {{ 'yes' if (sftp_password_auth|bool) else 'no' }}"
+        - "PermitRootLogin {{ 'yes' if (sftp_root_login|bool) else 'no' }}"
+        - "X11Forwarding {{ 'yes' if (sftp_x11_forwardning|bool) else 'no' }}"
   rescue:
     - debug:
-        msg: "WARNING: SSH chroot configuration for sftp is not correct!"
-  when: set_sftp_chroot == true
+        msg: "Req-024 (2/3): FAILED"
+  when: ansible_check_mode and set_sftp_chroot
 
 - block:
-    - name: req-078.3 check for sftp group
+    - name: req-024.3 check for sftp group
       group:
-        name: "{{ use_sftp_group }}"
+        name: "{{ sftp_group }}"
         state: present
       register: check_sftp_group
-      failed_when: (check_sftp_group is changed)
+      failed_when: check_sftp_group.changed
   rescue:
     - debug:
-        msg: "WARNING: SSH group {{ use_sftp_group }} is missing!"
-  when: set_sftp_chroot == true
+        msg: "Req-024 (3/3): FAILED"
+  when: ansible_check_mode and set_sftp_chroot
