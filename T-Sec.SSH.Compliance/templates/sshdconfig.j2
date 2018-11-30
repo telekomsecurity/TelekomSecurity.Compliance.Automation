@@ -1,25 +1,24 @@
-# Telekom Security Linux OS Hardening
+# Telekom Security - Compliance Automation
 # File generated during automated hardening with Ansible
 
 # See the sshd_config(5) manpage for details
 
-{% for port in use_ssh_server_ports -%}
+{% for port in ssh_server_ports -%}
 Port {{port}}
 {% endfor %}
 
 # Sets address family to 'inet' if IPv4 only is used or 'any' for IPv4 and 6.
 AddressFamily {{ 'any' if (config_ipv6_enable|bool) else 'inet' }}
 
-# Req 56: Administrative services must be bind to the management network.
 {% if config_mgmt_interface_ipv4 %}
-ListenAddress {{use_mgmt_interface_ipv4}}
+ListenAddress {{ mgmt_interface_ipv4 }}
 {% endif %}
 {% if config_mgmt_interface_ipv6 %}
-ListenAddress {{use_mgmt_interface_ipv6}}
+ListenAddress {{ mgmt_interface_ipv6 }}
 {% endif %}
 
 # Obsolet with OpenSSH version 7.4
-# Protocol 2
+Protocol 2
 
 # HostKeys for protocol version 2
 HostKey /etc/ssh/ssh_host_rsa_key
@@ -27,50 +26,39 @@ HostKey /etc/ssh/ssh_host_dsa_key
 HostKey /etc/ssh/ssh_host_ecdsa_key
 HostKey /etc/ssh/ssh_host_ed25519_key
 
-# Req 59: Only approved ciphers & key exchange algorithms must be used.
 # key exchange algorithms:
-KexAlgorithms {{ use_ssh_key_ex | join(',') }}
+KexAlgorithms {{ ssh_key_ex | join(',') }}
 # ciphers:
-Ciphers {{ use_ssh_ciphers | join(',') }}
+Ciphers {{ ssh_ciphers | join(',') }}
 
-# Req 60: Only approved MAC algorithms must be used.
-MACs {{ use_ssh_macs | join(',') }}
+MACs {{ ssh_macs | join(',') }}
 
 # UseLogin no
-UsePrivilegeSeparation {{use_ssh_ps}}
+UsePrivilegeSeparation {{ssh_ps}}
 
-# Req 61: SSH logging must be enabled.
-SyslogFacility {{use_ssh_syslogfacility}}
-LogLevel {{use_ssh_loglevel}}
+SyslogFacility {{ssh_syslogfacility}}
+LogLevel {{ssh_loglevel}}
 
-# Req 62: SSH LoginGraceTime must be set to one minute or less.
-LoginGraceTime {{use_login_grace_time}}
+LoginGraceTime {{login_grace_time}}
 
-# Req 63: SSH MaxAuthTries must be set to 5 or less.
-MaxAuthTries {{use_max_auth_tries}}
-MaxSessions {{use_max_sessions}}
-MaxStartups {{use_max_startups}}
+MaxAuthTries {{max_auth_tries}}
+MaxSessions {{max_sessions}}
+MaxStartups {{max_startups}}
 
-# Req 64: SSH root login must be disabled.
-PermitRootLogin {{ 'without-password' if (use_allow_root_login|bool) else 'no' }}
+PermitRootLogin {{ 'without-password' if (allow_root_login|bool) else 'no' }}
 
-# Req 65: SSH strict mode must be enabled.
-StrictModes {{ 'yes' if (use_strict_mode|bool) else 'no' }}
+StrictModes {{ 'yes' if (strict_mode|bool) else 'no' }}
 
-# Req 66: SSH user authentication must be done with public keys.
-PubkeyAuthentication {{ 'yes' if (use_pubkey_auth|bool) else 'no' }}
+PubkeyAuthentication {{ 'yes' if (pubkey_auth|bool) else 'no' }}
 
-# Req 68: SSH IgnoreRhosts must be enabled.
-IgnoreRhosts {{ 'yes' if (use_ignore_rhosts|bool) else 'no' }}
+IgnoreRhosts {{ 'yes' if (ignore_rhosts|bool) else 'no' }}
 
-# Req 69: SSH HostbasedAuthentication must be disabled.
-HostbasedAuthentication {{ 'yes' if (use_host_based_auth|bool) else 'no' }}
-IgnoreUserKnownHosts {{ 'yes' if (use_ignore_known_hosts|bool) else 'no' }}
+HostbasedAuthentication {{ 'yes' if (host_based_auth|bool) else 'no' }}
+IgnoreUserKnownHosts {{ 'yes' if (ignore_known_hosts|bool) else 'no' }}
 
-# Req 67: SSH password authentication must be disabled.
-PermitEmptyPasswords {{ 'yes' if (use_permit_empty_pw|bool) else 'no' }}
-ChallengeResponseAuthentication {{ 'yes' if (use_challenge_response|bool) else 'no' }}
-PasswordAuthentication {{ 'yes' if (use_password_auth|bool) else 'no' }}
+PermitEmptyPasswords {{ 'yes' if (permit_empty_pw|bool) else 'no' }}
+ChallengeResponseAuthentication {{ 'yes' if (challenge_response|bool) else 'no' }}
+PasswordAuthentication {{ 'yes' if (password_auth|bool) else 'no' }}
 
 # Kerberos options
 #KerberosAuthentication no
@@ -82,9 +70,7 @@ PasswordAuthentication {{ 'yes' if (use_password_auth|bool) else 'no' }}
 #GSSAPIAuthentication no
 #GSSAPICleanupCredentials yes
 
-# Req 70: The usage of the SSH service must be restricted to dedicated
-# groups or users.
-UsePAM {{ 'yes' if (use_pam_for_ssh|bool) else 'no' }}
+UsePAM {{ 'yes' if (pam_for_ssh|bool) else 'no' }}
 
 {% if ssh_deny_users -%}
 DenyUsers "{{ssh_deny_users}}"
@@ -96,31 +82,24 @@ AllowUsers {{ssh_allow_users}}
 DenyGroups {{ssh_deny_groups}}
 {% endif %}
 {% if ssh_allow_groups -%}
-AllowGroups {{use_group_ssh}} {{ssh_allow_groups}}
+AllowGroups {{group_ssh}} {{ssh_allow_groups}}
 {% endif %}
 
-# Req 71: The SSH Idle Timeout Interval must be configured to an adequate time.
-TCPKeepAlive {{ 'yes' if (use_tcp_keepalive|bool) else 'no' }}
-ClientAliveInterval {{use_client_alive_interval}}
-ClientAliveCountMax {{use_client_alive_count}}
+TCPKeepAlive {{ 'yes' if (tcp_keepalive|bool) else 'no' }}
+ClientAliveInterval {{client_alive_interval}}
+ClientAliveCountMax {{client_alive_count}}
 
-# Req 72: SSH tunnel devices must not be used.
-PermitTunnel {{ 'yes' if (use_permit_tunnel|bool) else 'no' }}
+PermitTunnel {{ 'yes' if (permit_tunnel|bool) else 'no' }}
 
-# Req 73: SSH TCP port forwarding must be disabled.
-AllowTcpForwarding {{ 'yes' if (use_allow_tcp_forwarding|bool) else 'no' }}
+AllowTcpForwarding {{ 'yes' if (allow_tcp_forwarding|bool) else 'no' }}
 
-# Req 74: SSH agent forwarding must be disabled.
-AllowAgentForwarding {{ 'yes' if (use_allow_agent_forwarding|bool) else 'no' }}
+AllowAgentForwarding {{ 'yes' if (allow_agent_forwarding|bool) else 'no' }}
 
-# Req 75: SSH gateway ports must be disabled.
-GatewayPorts {{ 'yes' if (use_gw_ports|bool) else 'no' }}
+GatewayPorts {{ 'yes' if (gw_ports|bool) else 'no' }}
 
-# Req 76: SSH X11 forwarding must be disabled.
-X11Forwarding {{ 'yes' if (use_x11_forwarding|bool) else 'no' }}
+X11Forwarding {{ 'yes' if (x11_forwarding|bool) else 'no' }}
 
-# Req 77: SSH PermitUserEnvironment must be disabled.
-PermitUserEnvironment {{ 'yes' if (use_permit_user_env|bool) else 'no' }}
+PermitUserEnvironment {{ 'yes' if (permit_user_env|bool) else 'no' }}
 
 PrintMotd no
 Banner '/etc/issue.net'
@@ -128,18 +107,17 @@ Banner '/etc/issue.net'
 # Reject keys that are explicitly blacklisted
 # RevokedKeys /etc/ssh/revoked_keys
 
-# Req 78: If SFTP is activated, internal server of OpenSSH must be used.
 {% if set_sftp_enabled %}
-Subsystem sftp internal-sftp -l {{use_sftp_logging}}
+Subsystem sftp internal-sftp -l {{sftp_logging}}
 
 {% if set_sftp_chroot %}
-Match Group {{use_sftp_group}}
-    ForceCommand internal-sftp -l {{use_sftp_logging}}
-    ChrootDirectory {{ use_sftp_chroot_dir }}
-    AllowTcpForwarding {{ 'yes' if (use_sftp_tcp_forwarding|bool) else 'no' }}
-    AllowAgentForwarding {{ 'yes' if (use_sftp_agent_forwarding|bool) else 'no' }}
-    PasswordAuthentication {{ 'yes' if (use_sftp_password_auth|bool) else 'no' }}
-    PermitRootLogin {{ 'yes' if (use_sftp_root_login|bool) else 'no' }}
-    X11Forwarding {{ 'yes' if (use_sftp_x11_forwardning|bool) else 'no' }}
+Match Group {{sftp_group}}
+    ForceCommand internal-sftp -l {{sftp_logging}}
+    ChrootDirectory {{ sftp_chroot_dir }}
+    AllowTcpForwarding {{ 'yes' if (sftp_tcp_forwarding|bool) else 'no' }}
+    AllowAgentForwarding {{ 'yes' if (sftp_agent_forwarding|bool) else 'no' }}
+    PasswordAuthentication {{ 'yes' if (sftp_password_auth|bool) else 'no' }}
+    PermitRootLogin {{ 'yes' if (sftp_root_login|bool) else 'no' }}
+    X11Forwarding {{ 'yes' if (sftp_x11_forwardning|bool) else 'no' }}
 {% endif %}
 {% endif %}

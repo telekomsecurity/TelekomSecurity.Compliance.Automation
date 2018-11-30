@@ -4,3 +4,8 @@
 # SSH (3.04)
 # Handlers
 # ------------------------------------------------------------------------
+
+- name: restart sshd
+  service:
+    name: '{{ sshd_service_name }}'
+    state: restarted

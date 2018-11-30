@@ -4,3 +4,12 @@
 # SSH (3.04)
 # Default Variables
 # ------------------------------------------------------------------------
+
+# Enable (true) if a dedicated IPv4 management interface is used.
+config_mgmt_interface_ipv4: false
+# Define IPv4 address for mgmt interface.
+mgmt_interface_ipv4: "0.0.0.0"
+# Enable if (true) a dedicated IPv6 management interface is used.
+config_mgmt_interface_ipv6: false
+# Define IPv6 address for mgmt interface.
+mgmt_interface_ipv6: "::"
