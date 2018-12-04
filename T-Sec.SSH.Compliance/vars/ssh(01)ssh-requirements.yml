@@ -27,8 +27,8 @@ ssh_key_ex:
   - curve25519-sha256@libssh.org
   - diffie-hellman-group-exchange-sha256
   - ecdh-sha2-nistp521
-  -	ecdh-sha2-nistp384
-  -	ecdh-sha2-nistp256
+  - ecdh-sha2-nistp384
+  - ecdh-sha2-nistp256
 
 # Req 4:	Only approved ciphers algorithms must be used.
 ssh_ciphers:
@@ -72,7 +72,6 @@ pubkey_auth: true
 
 # Req 12:	SSH password authentication must be disabled.
 password_auth: false
-permit_empty_pw: false
 challenge_response: false
 
 # Req 13:	SSH IgnoreRhosts must be enabled.
@@ -119,11 +118,11 @@ permit_empty_pw: false
 # Req 24:	If SFTP is activated, internal server of OpenSSH must be used.
 set_sftp_enabled: true
 set_sftp_chroot: false
-use_sftp_logging: INFO
-use_sftp_group: 'sftpusr'
-use_sftp_chroot_dir: /home/%u
-use_sftp_tcp_forwarding: false
-use_sftp_agent_forwarding: false
-use_sftp_password_auth: false
-use_sftp_root_login: false
-use_sftp_x11_forwardning: false
+sftp_logging: INFO
+sftp_group: 'sftpusr'
+sftp_chroot_dir: /home/%u
+sftp_tcp_forwarding: false
+sftp_agent_forwarding: false
+sftp_password_auth: false
+sftp_root_login: false
+sftp_x11_forwardning: false

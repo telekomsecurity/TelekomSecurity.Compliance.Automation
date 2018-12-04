@@ -33,9 +33,6 @@ Ciphers {{ ssh_ciphers | join(',') }}
 
 MACs {{ ssh_macs | join(',') }}
 
-# UseLogin no
-UsePrivilegeSeparation {{ssh_ps}}
-
 SyslogFacility {{ssh_syslogfacility}}
 LogLevel {{ssh_loglevel}}
 

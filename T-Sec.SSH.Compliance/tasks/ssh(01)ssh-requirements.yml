@@ -21,7 +21,7 @@
          [ -r /etc/ssh/moduli.new -a -s /etc/ssh/moduli.new ] && mv /etc/ssh/moduli.new /etc/ssh/moduli || true
   notify: restart sshd
   when: config_ssh_server and
-        ( not ansible_check_mode and ssh_moduli.stdout != "")
+        ( not ansible_check_mode and ssh_moduli.stdout != "" )
 
 # Req 3:	Only approved key exchange algorithms must be used.
 # Req 4:	Only approved ciphers algorithms must be used.

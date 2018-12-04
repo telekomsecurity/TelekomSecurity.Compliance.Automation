@@ -13,7 +13,7 @@
 
 # Do not change group ssh! Add only additional groups if
 # needed. Otherwise, you can't login afterwards!
-use_group_ssh: "ssh"
+group_ssh: "ssh"
 
 # File: /etc/ssh/sshd_config
 sshd_conf_file: "/etc/ssh/sshd_config"
