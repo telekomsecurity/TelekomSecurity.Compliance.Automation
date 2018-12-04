@@ -67,7 +67,7 @@ PasswordAuthentication {{ 'yes' if (password_auth|bool) else 'no' }}
 #GSSAPIAuthentication no
 #GSSAPICleanupCredentials yes
 
-UsePAM {{ 'yes' if (pam_for_ssh|bool) else 'no' }}
+UsePAM yes
 
 {% if ssh_deny_users -%}
 DenyUsers "{{ssh_deny_users}}"

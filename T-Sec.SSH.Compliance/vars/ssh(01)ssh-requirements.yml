@@ -83,7 +83,6 @@ ignore_known_hosts: tru
 
 # Req 15:	The usage of the SSH service must be restricted to dedicated groups
 # or users.
-pam_for_ssh: false
 ssh_deny_users: ''
 ssh_allow_users: ''
 ssh_deny_groups: ''
