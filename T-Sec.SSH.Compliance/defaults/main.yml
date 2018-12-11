@@ -41,5 +41,5 @@ password: ""
 # Set path to public-key file (e.g. id_rsa.pub).
 # Place file in folder 'files' or configure own path to your privat key.
 public_key_file: "{{ role_path }}/files/id_rsa.pub"
-# Change if othe group is used for sudo.
+# Change if other group is used for sudo.
 group_sudo: sudo
