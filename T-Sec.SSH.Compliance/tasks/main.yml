@@ -41,6 +41,6 @@
     key: "{{ lookup('file', public_key_file) }}"
   when: config_new_user and not ansible_check_mode
 
-# - name: 01 ssh requirements
+# 01 ssh requirements
 - include_vars: ssh(01)ssh-requirements.yml
 - import_tasks: ssh(01)ssh-requirements.yml

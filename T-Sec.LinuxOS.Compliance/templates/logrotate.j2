@@ -1,0 +1,40 @@
+# Telekom Security Linux OS Hardening
+# File generated during automated hardening with Ansible
+{{log_rotate_time}}
+
+# use the syslog group by default, since this is the owning group
+# of /var/log/syslog. (Ubuntu)
+{{ 'su root syslog' if (ansible_distribution == 'Ubuntu') else '#su root syslog' }}
+
+rotate {{log_rotate_count}}
+
+# create new (empty) log files after rotating old ones
+create
+
+# use date as a suffix of the rotated file
+dateext
+
+# compress log files
+{{ 'compress' if (log_rotate_compress|bool) else '#compress' }}
+
+# RPM packages drop log rotation information into this directory
+include /etc/logrotate.d
+
+# no packages own wtmp and btmp -- we'll rotate them here
+/var/log/wtmp {
+    missingok
+    monthly
+    create 0660 root utmp
+    maxsize {{log_rotate_maxsize}}
+    rotate 1
+}
+
+/var/log/btmp {
+    missingok
+    monthly
+    create 0660 root utmp
+    maxsize {{log_rotate_maxsize}}
+    rotate 1
+}
+
+# system-specific logs may be also be configured here.

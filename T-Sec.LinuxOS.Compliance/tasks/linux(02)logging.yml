@@ -5,13 +5,103 @@
 # Tasks: 02 Logging
 # ------------------------------------------------------------------------
 
+- name: install auditd
+  package:
+    name: '{{ audit_deamon }}'
+    state: present
+  when: config_auditd and not ansible_check_mode
+
 # Req 30:	Logging must be enabled in bootloader configuration.
 
+- block:
+    - name: req-030.1 enable logging before auditd starts
+      lineinfile:
+        path: '/etc/default/grub'
+        regexp: ^GRUB_CMDLINE_LINUX=(.*)"
+        line: GRUB_CMDLINE_LINUX="audit=1"
+        state: present
+      notify: update grub
+      register: check_grub_logging
+      failed_when: check_grub_logging.changed and ansible_check_mode
+  rescue:
+    - debug:
+        msg: "Req-030 (1/1): FAILED"
+  when: config_grub_logging
+
 # Req 31:	Log rotation for logfiles must be configured.
+
+- name: req-031.1 disable unused filesystems
+  template:
+    src: 'logrotate.j2'
+    dest: '/etc/logrotate.conf'
+    owner: root
+    group: root
+    mode: 0644
+  when: config_log_rotate and not ansible_check_mode
+
+##### <tbd> #####
+# Compliance Check fehlt
 
 # Req 32:	System time must be synchronized against a reference time source.
 
 # Req 33:	Auditd service must be used to log security relevant events.
+
+- block:
+    - name: req-033.1 check if auditd is installed
+      package:
+        name: '{{ audit_deamon }}'
+        state: absent
+      register: check_auditd
+      failed_when: check_auditd.changed
+      changed_when: false
+  rescue:
+    - debug:
+        msg: "Req-033 (1/4): FAILED"
+  when: config_auditd and ansible_check_mode
+
+- block:
+    - name: req-033.2 check max size for log rotate in auditd.conf
+      lineinfile:
+        path: '/etc/audit/auditd.conf'
+        regexp: '^max_log_file ='
+        line: 'max_log_file = {{ auditd_file_size }}'
+        state: present
+      register: check_auditd_maxsize
+      failed_when: check_auditd_maxsize.changed and ansible_check_mode
+  rescue:
+    - debug:
+        msg: "Req-033 (2/4): FAILED"
+  when: config_auditd and config_log_rotate
+
+- block:
+    - name: req-033.3 check if rotate is enabled for auditd
+      lineinfile:
+        path: '/etc/audit/auditd.conf'
+        regexp: '^num_logs ='
+        line: 'num_logs = {{ auditd_num_logs }}'
+        state: present
+      register: check_auditd_num_logs
+      failed_when: check_auditd_num_logs.changed and ansible_check_mode
+      notify: restart auditd
+  rescue:
+    - debug:
+        msg: "Req-033 (3/4): FAILED"
+  when: config_auditd and config_log_rotate
+
+- block:
+    - name: req-033.4 check if rotate is enabled for auditd
+      lineinfile:
+        path: '/etc/audit/auditd.conf'
+        regexp: '^max_log_file_action ='
+        line: 'max_log_file_action = {{ auditd_rotate_action }}'
+        state: present
+      register: check_auditd_rotate
+      failed_when: check_auditd_rotate.changed and ansible_check_mode
+      notify: restart auditd
+  rescue:
+    - debug:
+        msg: "Req-033 (4/4): FAILED"
+  when: config_auditd and config_log_rotate
 
 # Req 34:	System events must be logged.
 
@@ -22,6 +112,19 @@
 # Req 37:	Configuration Change events must be logged.
 
 # Req 38:	Auditd configuration must be immutable.
+
+- block:
+    - name: req-051.7 check if audit configuration is immutable
+      lineinfile:
+        path: '/etc/audit/audit.rules'
+        line: '-e 2'
+        state: present
+      register: check_log_immutable
+      failed_when: (check_log_immutable is changed)
+  rescue:
+    - debug:
+        msg: "WARNING: Audit configuration is not set to immutable in audit.rules file!"
+  when: check_auditd_installed.changed == true
 
 # Req 39:	Security relevant logging data must be send to an external system direct
 # after their creation.

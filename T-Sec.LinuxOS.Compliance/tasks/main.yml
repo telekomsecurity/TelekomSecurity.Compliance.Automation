@@ -46,18 +46,14 @@
 
 #- import_tasks: test.yml
 
-- name: 01 basic hardening
-  include_vars: linux(01)basic-hardening.yml
-  import_tasks: linux(01)basic-hardening.yml
+# 01 basic hardening
+# - include_vars: linux(01)basic-hardening.yml
+# - import_tasks: linux(01)basic-hardening.yml
 
-#- import_tasks: test.yml
-
-  tags: basic_hardening
-
-#- name: 02 logging
-#  include_vars: linux(02)logging.yml
-#  import_tasks: linux(02)logging.yml
-#  tags: logging
+# 02 logging
+- include_vars: linux(02)logging.yml
+# - import_tasks: linux(02)logging.yml
+- import_tasks: test.yml
 
 #- name: 03 logging
 #  include_vars: inux(03)pam.yml

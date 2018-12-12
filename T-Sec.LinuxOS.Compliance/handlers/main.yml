@@ -5,25 +5,20 @@
 # Handlers
 # ------------------------------------------------------------------------
 
-#- name: update grub
-#  command: '{{ grub_update_tool }}'
+- name: update grub
+  command: '{{ grub_update_tool }}'
 
-#- name: restart rsyslog
-#  service:
-#    name: 'rsyslog'
-#    state: restarted
+- name: restart rsyslog
+  service:
+    name: 'rsyslog'
+    state: restarted
 
-#- name: restart auditd
-#  service:
-#    name: 'auditd'
-#    state: restarted
+- name: restart auditd
+  service:
+    name: 'auditd'
+    state: restarted
 
-#- name: restart sshd
-#  service:
-#    name: '{{ sshd_service_name }}'
-#    state: restarted
-
-#- name: restart ntp
-#  service:
-#    name: '{{ use_ntp_deamon }}'
-#    state: restarted
+- name: restart ntp
+  service:
+    name: '{{ ntp_deamon }}'
+    state: restarted

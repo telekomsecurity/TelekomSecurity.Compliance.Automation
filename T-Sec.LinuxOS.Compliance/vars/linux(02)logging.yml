@@ -12,12 +12,22 @@
 # ========================================================================
 
 # Req 30:	Logging must be enabled in bootloader configuration.
+config_grub_logging: true
 
 # Req 31:	Log rotation for logfiles must be configured.
+config_log_rotate: true
+log_rotate_time: "weekly"
+log_rotate_count: 4
+log_rotate_maxsize: "10M"
+log_rotate_compress: false
 
 # Req 32:	System time must be synchronized against a reference time source.
 
 # Req 33:	Auditd service must be used to log security relevant events.
+config_auditd: true
+auditd_file_size: 10
+auditd_rotate_action: "ROTATE"
+auditd_num_logs: 5
 
 # Req 34:	System events must be logged.
 
