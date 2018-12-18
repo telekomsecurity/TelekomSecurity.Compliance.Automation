@@ -16,5 +16,6 @@ rsync_deamon: 'rsync'
 uid_default: 999
 nologin_path: /usr/sbin/nologin
 grub_update_tool: "update-grub"
-audit_deamon: "auditd"
+ntp_software: "ntp"
 ntp_deamon: "ntp"
+audit_deamon: "auditd"

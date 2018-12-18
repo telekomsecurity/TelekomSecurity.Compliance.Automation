@@ -16,5 +16,6 @@ rsync_deamon: 'rsyncd'
 uid_default: 999
 nologin_path: /sbin/nologin
 grub_update_tool: "grub2-mkconfig -o /boot/grub2/grub.cfg"
-ntp_deamon: "ntpd"
+ntp_software: "chrony"
+ntp_deamon: "chronyd"
 audit_deamon: "audit"

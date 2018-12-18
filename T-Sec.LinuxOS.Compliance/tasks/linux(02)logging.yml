@@ -5,12 +5,6 @@
 # Tasks: 02 Logging
 # ------------------------------------------------------------------------
 
-- name: install auditd
-  package:
-    name: '{{ audit_deamon }}'
-    state: present
-  when: config_auditd and not ansible_check_mode
-
 # Req 30:	Logging must be enabled in bootloader configuration.
 
 - block:
@@ -20,13 +14,12 @@
         regexp: ^GRUB_CMDLINE_LINUX=(.*)"
         line: GRUB_CMDLINE_LINUX="audit=1"
         state: present
-      notify: update grub
       register: check_grub_logging
-      failed_when: check_grub_logging.changed and ansible_check_mode
+      failed_when: check_grub_logging.changed
   rescue:
     - debug:
         msg: "Req-030 (1/1): FAILED"
-  when: config_grub_logging
+  when: config_grub_logging and ansible_check_mode
 
 # Req 31:	Log rotation for logfiles must be configured.
 
@@ -39,10 +32,135 @@
     mode: 0644
   when: config_log_rotate and not ansible_check_mode
 
-##### <tbd> #####
-# Compliance Check fehlt
+- block:
+    - name: req-031.2 check time for log rotate
+      lineinfile:
+        path: '/etc/logrotate.conf'
+        line: '{{ log_rotate_time }}'
+        state: present
+      register: check_rotate_time
+      failed_when: check_rotate_time.changed
+  rescue:
+    - debug:
+        msg: "Req-031 (1/3): FAILED"
+  when: config_log_rotate and ansible_check_mode
+
+- block:
+    - name: req-031.3 check count for log rotate
+      lineinfile:
+        path: '/etc/logrotate.conf'
+        regexp: '^rotate'
+        line: 'rotate {{ log_rotate_count }}'
+        state: present
+      register: check_rotate_count
+      failed_when: check_rotate_count.changed
+  rescue:
+        msg: "Req-031 (2/3): FAILED"
+  when: config_log_rotate and ansible_check_mode
+
+- block:
+    - name: req-052.6 check max size for log rotate
+      lineinfile:
+        path: '/etc/logrotate.conf'
+        line: 'maxsize {{ log_rotate_maxsize }}'
+        state: present
+      register: check_rotate_maxsize
+      failed_when: check_rotate_maxsize.changed
+  rescue:
+    - debug:
+        msg: "Req-031 (3/3): FAILED"
+  when: config_log_rotate and ansible_check_mode
 
 # Req 32:	System time must be synchronized against a reference time source.
+
+- block:
+    - name: req-032.1 install ntp/chrony
+      package:
+        name: {{ ntp_software }}
+        state: present
+      register: check_ntp
+      failed_when: not check_ntp.changed and ansible_check_mode
+      notify: restart ntp
+  rescue:
+    - debug: "Req-032 (1/3): FAILED"
+  when: config_ntp and
+
+- name: req-032.2 set time zone
+  command: timedatectl set-timezone {{ use_timezone }}
+  when: config_ntp and
+       (set_timezone and not ansible_check_mode)
+
+- block:
+    - name: req-032.3 check time zone
+      shell: timedatectl status | grep -i "{{ use_timezone }}" | wc -l
+      register: check_timezone
+      failed_when: check_timezone.stdout == "0"
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        debug: "Req-032 (2/3): FAILED"
+  when: config_ntp and
+       (set_timezone and not ansible_check_mode)
+
+- block:
+    - name: req-032.4 change init.d/ntp file
+      lineinfile:
+        dest: '/etc/init.d/ntp'
+        regexp: '^RUNASUSER=(.*)'
+        line: 'RUNASUSER=ntp'
+      register: check_ntp
+      failed_when: not check_ntp.changed and ansible_check_mode
+      notify: restart ntp
+  rescue:
+    - debug:
+        debug: "Req-032 (2/3): FAILED"
+  when: config_ntp and ansible_os_family == "Debian"
+
+# ---NTP ---
+- name: req-054.4 change ntp.conf
+  template:
+    src: 'ntp-config.j2'
+    dest: '/etc/ntp.conf'
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart ntp
+  when: config_ntp == true
+
+- block:
+    - name: req-054.4 check ntp config file
+      stat:
+        path: '/etc/ntp.conf'
+      register: ntp_status
+      failed_when: ntp_status.stat.exists == false
+  rescue:
+    - debug:
+        msg: "WARNING: ntp configuration file not found!"
+  when: check_ntp.changed == true
+
+- block:
+    - name: req-054.5 check ntp configuration
+      lineinfile:
+        path: '/etc/ntp.conf'
+        line: "server {{ item }}"
+        state: present
+      register: ntp_srv_check
+      failed_when: (ntp_srv_check is changed)
+      with_items: "{{ use_ntp_servers }}"
+  rescue:
+    - debug:
+        msg: "WARNING: NTP server configuration is incorrect!"
+  when: check_ntp.changed == true and ntp_status.stat.exists == true
+
+# --- Chrony ---
+# ???
+
+# grep "^(server|pool)" /etc/chrony.conf
+# server <remote-server>
+
+# grep ^OPTIONS /etc/sysconfig/chronyd
+# OPTIONS="-u chrony"
 
 # Req 33:	Auditd service must be used to log security relevant events.
 
@@ -52,12 +170,21 @@
         name: '{{ audit_deamon }}'
         state: absent
       register: check_auditd
-      failed_when: check_auditd.changed
+      failed_when: check_auditd.changed and ansible_check_mode
       changed_when: false
   rescue:
     - debug:
         msg: "Req-033 (1/4): FAILED"
-  when: config_auditd and ansible_check_mode
+  when: config_auditd
+
+- name: req-030 enable logging before auditd starts
+  lineinfile:
+    path: '/etc/default/grub'
+    regexp: ^GRUB_CMDLINE_LINUX=(.*)"
+    line: GRUB_CMDLINE_LINUX="audit=1"
+    state: present
+  notify: update grub
+  when: config_grub_logging and not ansible_check_mode
 
 - block:
     - name: req-033.2 check max size for log rotate in auditd.conf

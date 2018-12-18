@@ -70,3 +70,14 @@ mgmt_interface_ipv4: "0.0.0.0"
 config_mgmt_interface_ipv6: false
 # Define IPv6 address for mgmt interface.
 mgmt_interface_ipv6: "::"
+
+# Req 32:	System time must be synchronized against a reference time source.
+# Note: Ubuntu Linux uses ntpd. For RedHat based Linux chrony will be used!
+config_ntp: false
+ntp_servers:
+  - "ntp-pool-info_ntpp10.telekom.de" # Change to your own ntp server
+  - "ntp-pool-info_ntpp21.telekom.de" # Change to your own ntp server
+#  - "<ip4-address or hostname>"
+#  - "<ip6-address or hostname>"
+set_timezone: true
+use_timezone: "Europe/Berlin"

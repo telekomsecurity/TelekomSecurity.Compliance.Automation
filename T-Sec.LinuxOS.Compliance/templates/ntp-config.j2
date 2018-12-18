@@ -1,0 +1,37 @@
+# Telekom Security Linux OS Hardening
+# File generated during automated hardening with Ansible
+
+driftfile /var/lib/ntp/ntp.drift
+
+# Enable this if you want statistics to be logged.
+#statsdir /var/log/ntpstats/
+
+statistics loopstats peerstats clockstats
+filegen loopstats file loopstats type day enable
+filegen peerstats file peerstats type day enable
+filegen clockstats file clockstats type day enable
+
+# Specify more NTP servers if needed.
+{% for ntp in ntp_servers %}
+server {{ntp}}
+{% endfor %}
+
+# Restrict ntp server
+restrict -4 default kod notrap nomodify nopeer noquery
+restrict -6 default kod notrap nomodify nopeer noquery
+
+# Local users may interrogate the ntp server more closely.
+
+# Set interface IP (4/6) address where ntp should listen on.
+# If 'restrict' is set ntp server is not accessible.
+{% if set_ntp_server_enable %}
+{% if config_mgmt_interface_ipv4 %}
+interface listen {{mgmt_interface_ipv4}}
+{% endif %}
+{% if config_mgmt_interface_ipv6 %}
+interface listen {{mgmt_interface_ipv6}}
+{% endif %}
+{% else %}
+restrict 127.0.0.1
+restrict ::1
+{% endif %}
