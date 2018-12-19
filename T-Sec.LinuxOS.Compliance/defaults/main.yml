@@ -48,7 +48,7 @@ config_ipv6_enable: false
 # fixed or protected against misuse.
 
 # Enable (true) if Ansible should do an update to current patch level.
-do_system_upgrade: true
+do_system_upgrade: false
 
 # Req 21:	User accounts must be used that allow unambiguous identification of
 # the user.
@@ -73,7 +73,7 @@ mgmt_interface_ipv6: "::"
 
 # Req 32:	System time must be synchronized against a reference time source.
 # Note: Ubuntu Linux uses ntpd. For RedHat based Linux chrony will be used!
-config_ntp: false
+config_ntp: true
 ntp_servers:
   - "ntp-pool-info_ntpp10.telekom.de" # Change to your own ntp server
   - "ntp-pool-info_ntpp21.telekom.de" # Change to your own ntp server
@@ -81,3 +81,13 @@ ntp_servers:
 #  - "<ip6-address or hostname>"
 set_timezone: true
 use_timezone: "Europe/Berlin"
+
+# Req 39:	Security relevant logging data must be send to an external system direct
+# after their creation
+# ------------------------------------------------------------------------
+# Note: You can only use rsyslog in this version! syslogng will be
+# implemented in a later version!
+# ------------------------------------------------------------------------
+config_syslog: true
+syslog_type: "rsyslog"
+syslog_server: "1.1.1.1"

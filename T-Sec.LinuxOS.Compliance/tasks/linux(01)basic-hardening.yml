@@ -868,6 +868,7 @@
 #    - debug:
 #        msg: "Req-027 (3/4): FAILED"
 #  when: check_ntp.changed == true and ntp_status.stat.exists == true
+# New Var: ntp_server_enable
 
 #- block:
 #    - name: req-056.4 check if ntp is bind on ipv6 of mgmt interface

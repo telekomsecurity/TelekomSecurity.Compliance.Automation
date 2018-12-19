@@ -22,6 +22,7 @@ log_rotate_maxsize: "10M"
 log_rotate_compress: false
 
 # Req 32:	System time must be synchronized against a reference time source.
+ntp_server_enable: false
 
 # Req 33:	Auditd service must be used to log security relevant events.
 config_auditd: true
@@ -44,12 +45,14 @@ auditd_num_logs: 5
 
 # Req 40:	If RSyslog is used, the default permission of 640 or more restrictive
 # for logfiles must be configured.
+rsyslog_permissions: "0640"
 
 # Req 41:	If RSyslog is used, at least one central logging server must be
 # configured.
 
 # Req 42:	If Syslog-NG is used, the default permission of 640 or more restrictive
 # for logfiles must be configured.
+syslogng_permissions: "0640"
 
 # Req 43:	If Syslog-NG is used, at least one central logging server must be
 # configured.

@@ -24,7 +24,7 @@ restrict -6 default kod notrap nomodify nopeer noquery
 
 # Set interface IP (4/6) address where ntp should listen on.
 # If 'restrict' is set ntp server is not accessible.
-{% if set_ntp_server_enable %}
+{% if ntp_server_enable %}
 {% if config_mgmt_interface_ipv4 %}
 interface listen {{mgmt_interface_ipv4}}
 {% endif %}
