@@ -18,4 +18,5 @@ nologin_path: /usr/sbin/nologin
 grub_update_tool: "update-grub"
 ntp_software: "ntp"
 ntp_deamon: "ntp"
+ntp_config_file: "ntp-config.j2"
 audit_deamon: "auditd"

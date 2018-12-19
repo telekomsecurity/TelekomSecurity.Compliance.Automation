@@ -18,4 +18,5 @@ nologin_path: /sbin/nologin
 grub_update_tool: "grub2-mkconfig -o /boot/grub2/grub.cfg"
 ntp_software: "chrony"
 ntp_deamon: "chronyd"
+ntp_config_file: "chrony-config.j2"
 audit_deamon: "audit"

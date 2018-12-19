@@ -52,8 +52,8 @@
 
 # 02 logging
 - include_vars: linux(02)logging.yml
-# - import_tasks: linux(02)logging.yml
-- import_tasks: test.yml
+- import_tasks: linux(02)logging.yml
+#- import_tasks: test.yml
 
 #- name: 03 logging
 #  include_vars: inux(03)pam.yml

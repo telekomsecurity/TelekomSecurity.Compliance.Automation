@@ -82,7 +82,8 @@
       failed_when: not check_ntp.changed and ansible_check_mode
       notify: restart ntp
   rescue:
-    - debug: "Req-032 (1/3): FAILED"
+    - debug:
+        msg: "Req-032 (1/5): FAILED"
   when: config_ntp and
 
 - name: req-032.2 set time zone
@@ -99,7 +100,7 @@
       check_mode: no
   rescue:
     - debug:
-        debug: "Req-032 (2/3): FAILED"
+        msg: "Req-032 (2/5): FAILED"
   when: config_ntp and
        (set_timezone and not ansible_check_mode)
 
@@ -114,53 +115,57 @@
       notify: restart ntp
   rescue:
     - debug:
-        debug: "Req-032 (2/3): FAILED"
+        msg: "Req-032 (2/3): FAILED"
   when: config_ntp and ansible_os_family == "Debian"
 
-# ---NTP ---
-- name: req-054.4 change ntp.conf
+- name: req-032.5 change ntp.conf
   template:
-    src: 'ntp-config.j2'
-    dest: '/etc/ntp.conf'
+    src: '{{ ntp_config_file }}'
+    dest: '/etc/{{ntp_software}}.conf'
     owner: root
     group: root
     mode: 0644
   notify: restart ntp
-  when: config_ntp == true
+  when: config_ntp and not ansible_check_mode
 
 - block:
-    - name: req-054.4 check ntp config file
+    - name: req-032.6 check ntp config file
       stat:
-        path: '/etc/ntp.conf'
+        path: '/etc/{{ntp_software}}.conf'
       register: ntp_status
       failed_when: ntp_status.stat.exists == false
   rescue:
     - debug:
-        msg: "WARNING: ntp configuration file not found!"
-  when: check_ntp.changed == true
+        msg: "Req-032 (3/5): FAILED"
+  when: config_ntp and ansible_check_mode
 
 - block:
-    - name: req-054.5 check ntp configuration
+    - name: req-032.7 check ntp configuration
       lineinfile:
-        path: '/etc/ntp.conf'
+        path: '/etc/{{ntp_software}}.conf'
         line: "server {{ item }}"
         state: present
       register: ntp_srv_check
       failed_when: (ntp_srv_check is changed)
-      with_items: "{{ use_ntp_servers }}"
+      with_items: "{{ ntp_servers }}"
   rescue:
     - debug:
-        msg: "WARNING: NTP server configuration is incorrect!"
-  when: check_ntp.changed == true and ntp_status.stat.exists == true
+        msg: "Req-032 (4/5): FAILED"
+  when: ansible_check_mode and ntp_status.stat.exists
 
-# --- Chrony ---
-# ???
-
-# grep "^(server|pool)" /etc/chrony.conf
-# server <remote-server>
-
-# grep ^OPTIONS /etc/sysconfig/chronyd
-# OPTIONS="-u chrony"
+- block:
+    - name: req-032.8 change chronyd file
+      lineinfile:
+        dest: '/etc/sysconfig/chronyd'
+        regexp: '^OPTIONS=(.*)'
+        line: 'OPTIONS="-u chrony"'
+      register: check_chrony
+      failed_when: not check_chrony.changed and ansible_check_mode
+      notify: restart ntp
+  rescue:
+    - debug:
+        msg: "Req-032 (5/5): FAILED"
+  when: config_ntp and ansible_os_family == "RedHat"
 
 # Req 33:	Auditd service must be used to log security relevant events.
 
@@ -265,5 +270,23 @@
 # Req 42:	If Syslog-NG is used, the default permission of 640 or more restrictive
 # for logfiles must be configured.
 
+- block:
+    - name: req-042.0 generate dummy failure message
+      fail:
+        msg: "Req 42 can not be checked automatically. Please do manual check!"
+  rescue:
+    - debug:
+        msg: "Req-042 (1/1): FAILED"
+  when: ansible_check_mode
+
 # Req 43:	If Syslog-NG is used, at least one central logging server must be
 # configured.
+
+- block:
+    - name: req-043.0 generate dummy failure message
+      fail:
+        msg: "Req 43 can not be checked automatically. Please do manual check!"
+  rescue:
+    - debug:
+        msg: "Req-043 (1/1): FAILED"
+  when: ansible_check_mode
