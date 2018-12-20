@@ -2,7 +2,7 @@
 # ------------------------------------------------------------------------
 # Telekom Security - Compliance Automation
 # Linux OS for Servers (3.65)
-# Specific Variables for Red Hat Enterprise Linux
+# Specific Variables for Ubuntu Linux
 # ------------------------------------------------------------------------
 
 # =IMPORTANT==============================================================
@@ -11,45 +11,50 @@
 #
 # ========================================================================
 
-grub_update_tool: "grub2-mkconfig -o /boot/grub2/grub.cfg"
+grub_update_tool: "update-grub"
 
 # Req 1: Unused services and protocols must be deactivated.
-rsync_deamon: 'rsyncd'
+rsync_deamon: 'rsync'
 
 # Req 4:	Unused filesystems must be disabled.
-modprobe_package: 'module-init-tools'
+modprobe_package: 'kmod'
 
 # Req 21:	User accounts must be used that allow unambiguous identification of
 # the user.
 uid_default: 999
-nologin_path: /sbin/nologin
+nologin_path: /usr/sbin/nologin
+
 
 # Req 32:	System time must be synchronized against a reference time source.
-ntp_software: "chrony"
-ntp_deamon: "chronyd"
-ntp_config_file: "chrony-config.j2"
+ntp_software: "ntp"
+ntp_deamon: "ntp"
+ntp_config_file: "ntp-config.j2"
 
 # Req 33:	Auditd service must be used to log security relevant events.
-audit_deamon: "audit"
-audit_rules_file: "/etc/audit/audit.rules"
+audit_deamon: "auditd"
+audit_rules_file: "/etc/audit/rules.d/audit.rules"
 
 # Req 34:	System events must be logged.
 os_specific_system_events:
   # (Un)Installation of software
-  - "-w /usr/bin/rpm -p x -k software_mgmt"
-  - "-w /usr/bin/yum -p x -k software_mgmt"
+  - "-w /usr/bin/dpkg -p x -k software_mgmt"
+  - "-w /usr/bin/apt-add-repository -p x -k software_mgmt"
+  - "-w /usr/bin/apt-get -p x -k software_mgmt"
+  - "-w /usr/bin/aptitude -p x -k software_mgmt"
 
 # Req 35:	Access and Authentication events must be logged.
 os_specific_access_events:
   # Logon and Logoff
-  - "-w /var/run/faillock/ -p wa -k logins"
-  # SELinux events
-  - "-w /etc/selinux/ -p wa -k MAC-policy"
+  - "-w /var/log/faillog -p wa -k logins"
+  - "-w /var/log/tallylog -p wa -k logins"
+  # AppArmor events
+  - "-w /etc/apparmor/ -p wa -k MAC-policy"
+  - "-w /etc/apparmor.d/ -p wa -k MAC-policy"
 
 # Req 37:	Configuration Change events must be logged.
 os_specific_change_events:
   # Modification of logs
-  - "-w /var/log/messages"
+  - "-w /var/log/auth.log"
+  - "-w /var/log/system.log"
   # Network configuration change
-  - "-w /etc/sysconfig/network -p wa -k system-locale "
-  - "-w /etc/sysconfig/network-scripts/ -p wa -k system-locale "
+  - "-w /etc/sysconfig/network -p wa -k system-locale"

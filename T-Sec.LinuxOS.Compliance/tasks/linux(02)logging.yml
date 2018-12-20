@@ -103,7 +103,7 @@
     - debug:
         msg: "Req-032 (2/5): FAILED"
   when: config_ntp and
-       (set_timezone and not ansible_check_mode)
+       ( set_timezone and ansible_check_mode )
 
 - block:
     - name: req-032.4 change init.d/ntp file
@@ -147,7 +147,7 @@
         line: "server {{ item }}"
         state: present
       register: ntp_srv_check
-      failed_when: (ntp_srv_check is changed)
+      failed_when: ntp_srv_check.changed
       with_items: "{{ ntp_servers }}"
   rescue:
     - debug:
@@ -162,7 +162,7 @@
         regexp: '^OPTIONS=(.*)'
         line: 'OPTIONS="-u chrony"'
       register: check_chrony
-      failed_when: not check_chrony.changed and ansible_check_mode
+      failed_when: check_chrony.changed and ansible_check_mode
       notify: restart ntp
   rescue:
     - debug:
@@ -178,7 +178,6 @@
         state: present
       register: check_auditd
       failed_when: check_auditd.changed and ansible_check_mode
-      changed_when: false
   rescue:
     - debug:
         msg: "Req-033 (1/4): FAILED"
@@ -201,7 +200,8 @@
         line: 'max_log_file = {{ auditd_file_size }}'
         state: present
       register: check_auditd_maxsize
-      failed_when: check_auditd_maxsize.changed and ansible_check_mode
+      failed_when: ansible_check_mode and
+                  ( check_auditd.changed or check_auditd_maxsize.changed)
   rescue:
     - debug:
         msg: "Req-033 (2/4): FAILED"
@@ -215,7 +215,8 @@
         line: 'num_logs = {{ auditd_num_logs }}'
         state: present
       register: check_auditd_num_logs
-      failed_when: check_auditd_num_logs.changed and ansible_check_mode
+      failed_when: ansible_check_mode and
+                  ( check_auditd.changed or check_auditd_num_logs.changed )
       notify: restart auditd
   rescue:
     - debug:
@@ -230,7 +231,8 @@
         line: 'max_log_file_action = {{ auditd_rotate_action }}'
         state: present
       register: check_auditd_rotate
-      failed_when: check_auditd_rotate.changed and ansible_check_mode
+      failed_when: ansible_check_mode and
+                  ( check_auditd.changed or check_auditd_rotate.changed )
       notify: restart auditd
   rescue:
     - debug:
@@ -238,52 +240,128 @@
   when: config_auditd and config_log_rotate
 
 # Req 34:	System events must be logged.
-
-#- name: req-051.3 configure logging events
-#  template:
-#    src: 'logging-events.j2'
-#    dest: '/etc/audit/audit.rules'
-#    owner: root
-#    group: root
-#    mode: 0640
-#    backup: yes
-#  notify: restart auditd
-#  when: config_auditd
-
-#- block:
-#    - name: req-051.3 check config for logging events
-#      lineinfile:
-#        path: '/etc/audit/audit.rules'
-#        line: "{{ item }}"
-#        state: present
-#      register: check_log_events
-#      failed_when: (check_log_events is changed)
-#      with_items: "{{ set_log_events }}"
-#  rescue:
-#    - debug:
-#        msg: "WARNING: Logging events are not correct configured!"
-#  when: check_auditd_installed.changed == true
-
 # Req 35:	Access and Authentication events must be logged.
-
 # Req 36:	Account and Group Management events must be logged.
-
 # Req 37:	Configuration Change events must be logged.
+
+- name: req-034-37.1 configure logging events
+  template:
+    src: 'audit-rules.j2'
+    dest: "{{ audit_rules_file }}"
+    owner: root
+    group: root
+    mode: 0640
+    backup: yes
+  notify: restart auditd
+  when: config_auditd and not ansible_check_mode
+
+- block:
+    - name: req-034.1 check logging of system events
+      lineinfile:
+        path: "{{ audit_rules_file }}"
+        line: "{{ item }}"
+        state: present
+      register: check_system_events
+      failed_when: check_system_events.changed or check_auditd.changed
+      with_items:
+        - "{{ system_events }}"
+        - "{{ os_specific_system_events }}"
+  rescue:
+    - debug:
+        msg: "Req-034 (1/1): FAILED"
+  when: config_auditd and
+      ( config_system_events and ansible_check_mode )
+
+- block:
+    - name: req-035.1 check logging of access and authentication events
+      lineinfile:
+        path: "{{ audit_rules_file }}"
+        line: "{{ item }}"
+        state: present
+      register: check_access_events
+      failed_when: check_access_events.changed or check_auditd.changed
+      with_items:
+        - "{{ access_events }}"
+        - "{{ os_specific_access_events }}"
+  rescue:
+    - debug:
+        msg: "Req-035 (1/2): FAILED"
+  when: config_auditd and
+      ( config_access_events and ansible_check_mode )
+
+- name: req-035.2 search for privileged commands
+  shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f \( -perm -4000 -o -perm -2000 \) -print 2>/dev/null
+  register: priv_commands
+  changed_when: false
+  check_mode: no
+  when: config_auditd and config_access_events
+
+- block:
+  - name: req-035.3 configure logging for priviledged commands
+    lineinfile:
+      path: "{{ audit_rules_file }}"
+      insertafter: EOF
+      line: '-a always,exit -F path={{ item }} -F perm=x -F auid>=1000 -F auid!=4294967295 -k privileged'
+      state: present
+    with_items: '{{ priv_commands.stdout_lines }}'
+    notify: restart auditd
+    register: check_priv_log
+    failed_when: ansible_check_mode and
+                ( check_auditd.changed or check_priv_log.changed )
+  rescue:
+    - debug:
+        msg: "Req-035 (2/2): FAILED"
+  when: config_auditd and config_access_events
+
+- block:
+    - name: req-036.1 check logging of account and group mgmt events
+      lineinfile:
+        path: "{{ audit_rules_file }}"
+        line: "{{ item }}"
+        state: present
+      register: check_agm_events
+      failed_when: check_agm_events.changed or check_auditd.changed
+      with_items: "{{ account_group_mgmt_events }}"
+  rescue:
+    - debug:
+        msg: "Req-036 (1/1): FAILED"
+  when: config_auditd and
+      ( config_account_group_mgmt_events and ansible_check_mode )
+
+- block:
+    - name: req-037.1 check logging of configuration change events
+      lineinfile:
+        path: "{{ audit_rules_file }}"
+        line: "{{ item }}"
+        state: present
+      register: check_config_events
+      failed_when: check_config_events.changed or check_auditd.changed
+      with_items:
+        - "{{ change_events }}"
+        - "{{ os_specific_change_events }}"
+  rescue:
+    - debug:
+        msg: "Req-037 (1/1): FAILED"
+  when: config_auditd and
+      ( config_change_events and ansible_check_mode )
 
 # Req 38:	Auditd configuration must be immutable.
 
 - block:
     - name: req-038.1 make audit configuration immutable
       lineinfile:
-        path: '/etc/audit/audit.rules'
+        path: "{{ audit_rules_file }}"
+        insertafter: EOF
         line: '-e 2'
         state: present
       register: check_log_immutable
-      failed_when: check_log_immutable.changed and ansible_check_mode
+      failed_when: ansible_check_mode and
+                  ( check_auditd.changed or check_log_immutable.changed )
   rescue:
     - debug:
         msg: "Req-038 (1/1): FAILED"
-  when: config_auditd and check_auditd.changed
+  when: config_auditd and
+      ( check_auditd.changed and config_auditd_immutable )
 
 # Req 39:	Security relevant logging data must be send to an external system direct
 # after their creation.
@@ -295,7 +373,6 @@
         state: present
       register: check_syslog
       failed_when: check_syslog.changed and ansible_check_mode
-      changed_when: false
   rescue:
     - debug:
         msg: "Req-039 (1/1): FAILED"
@@ -313,7 +390,8 @@
         line: '$FileCreateMode {{ rsyslog_permissions }}'
       notify: restart rsyslog
       register: check_rsyslog_permissions
-      failed_when: check_rsyslog_permissions.changed and ansible_check_mode
+      failed_when: ansible_check_mode and
+                  ( check_syslog.changed or check_rsyslog_permissions.changed )
   rescue:
     - debug:
         msg: "Req-040 (1/1): FAILED"
@@ -330,7 +408,8 @@
       line: '*.* @{{ syslog_server }}:514'
     notify: restart rsyslog
     register: check_syslog_server
-    failed_when: check_syslog_server.changed and ansible_check_mode
+    failed_when: ansible_check_mode and
+                ( check_syslog.changed or check_syslog_server.changed )
   rescue:
     - debug:
         msg: "Req-041 (1/1): FAILED"

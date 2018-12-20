@@ -445,7 +445,7 @@
 
 - name: req-014.2 create file limits.conf
   template:
-    src: 'limits.conf.j2'
+    src: 'limits-conf.j2'
     dest: '/etc/security/limits.d/10.hardcore.conf'
     owner: root
     group: root

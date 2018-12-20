@@ -15,6 +15,11 @@
         (ansible_distribution == "Ubuntu" and ansible_distribution_version != "16.04") and
         (ansible_distribution == "Ubuntu" and ansible_distribution_version != "18.04")
 
+# Stop playbook if it is a 32 bit system
+- fail:
+    msg: "32 Bit systems are not supported!"
+  when: (ansible_architecture != "x86_64")
+
 # Read variables for detected OS from '/vars/<linux-os>.yml' files
 - name: read variables for detected os
   include_vars: "{{ item }}"

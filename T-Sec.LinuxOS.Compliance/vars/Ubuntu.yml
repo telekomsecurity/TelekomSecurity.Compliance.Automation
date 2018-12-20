@@ -11,12 +11,50 @@
 #
 # ========================================================================
 
-modprobe_package: 'kmod'
+grub_update_tool: "update-grub"
+
+# Req 1: Unused services and protocols must be deactivated.
 rsync_deamon: 'rsync'
+
+# Req 4:	Unused filesystems must be disabled.
+modprobe_package: 'kmod'
+
+# Req 21:	User accounts must be used that allow unambiguous identification of
+# the user.
 uid_default: 999
 nologin_path: /usr/sbin/nologin
-grub_update_tool: "update-grub"
+
+
+# Req 32:	System time must be synchronized against a reference time source.
 ntp_software: "ntp"
 ntp_deamon: "ntp"
 ntp_config_file: "ntp-config.j2"
+
+# Req 33:	Auditd service must be used to log security relevant events.
 audit_deamon: "auditd"
+audit_rules_file: "/etc/audit/audit.rules"
+
+# Req 34:	System events must be logged.
+os_specific_system_events:
+  # (Un)Installation of software
+  - "-w /usr/bin/dpkg -p x -k software_mgmt"
+  - "-w /usr/bin/apt-add-repository -p x -k software_mgmt"
+  - "-w /usr/bin/apt-get -p x -k software_mgmt"
+  - "-w /usr/bin/aptitude -p x -k software_mgmt"
+
+# Req 35:	Access and Authentication events must be logged.
+os_specific_access_events:
+  # Logon and Logoff
+  - "-w /var/log/faillog -p wa -k logins"
+  - "-w /var/log/tallylog -p wa -k logins"
+  # AppArmor events
+  - "-w /etc/apparmor/ -p wa -k MAC-policy"
+  - "-w /etc/apparmor.d/ -p wa -k MAC-policy"
+
+# Req 37:	Configuration Change events must be logged.
+os_specific_change_events:
+  # Modification of logs
+  - "-w /var/log/auth.log"
+  - "-w /var/log/system.log"
+  # Network configuration change
+  - "-w /etc/sysconfig/network -p wa -k system-locale"

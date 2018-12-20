@@ -8,17 +8,7 @@
     msg: Distro Version "{{ ansible_distribution_version }}"
 - debug:
     msg: Distro Major Version "{{ ansible_distribution_major_version }}"
+- debug:
+    msg: Architecture "{{ ansible_architecture }}"
 
 # ---------------------------------------------------------------------
-
-- name: req-031.1 disable unused filesystems
-  template:
-    src: 'logrotate.j2'
-    dest: '/etc/logrotate.conf'
-    owner: root
-    group: root
-    mode: 0644
-  when: config_log_rotate and not ansible_check_mode
-
-# tbd
-# logrotate.conf von allen Linux runterladen und vergleichen!
