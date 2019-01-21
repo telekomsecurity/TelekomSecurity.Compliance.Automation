@@ -1,0 +1,187 @@
+---
+# ------------------------------------------------------------------------
+# Telekom Security - Compliance Automation - Hardening
+# Linux OS for Servers (3.65)
+# Tasks: 02 Logging
+# ------------------------------------------------------------------------
+
+# Req 30:	Logging must be enabled in bootloader configuration.
+
+- name: req-030.1 enable logging before auditd starts
+  lineinfile:
+    path: '/etc/default/grub'
+    regexp: ^GRUB_CMDLINE_LINUX=(.*)"
+    line: GRUB_CMDLINE_LINUX="audit=1"
+    state: present
+  when: config_grub_logging
+
+# Req 31:	Log rotation for logfiles must be configured.
+
+- name: req-031.1 configure logrotate
+  template:
+    src: 'logrotate.j2'
+    dest: '/etc/logrotate.conf'
+    owner: root
+    group: root
+    mode: 0644
+  when: config_log_rotate
+
+# Req 32:	System time must be synchronized against a reference time source.
+
+- name: req-032.1 install ntp/chrony
+  package:
+    name: "{{ ntp_software }}"
+    state: present
+  when: config_ntp
+
+- name: req-032.2 set time zone
+  command: timedatectl set-timezone {{ use_timezone }}
+  changed_when: false
+  when: config_ntp and set_timezone
+
+- name: req-032.3 change init.d/ntp file
+  lineinfile:
+    dest: '/etc/init.d/ntp'
+    regexp: '^RUNASUSER=(.*)'
+    line: 'RUNASUSER=ntp'
+  when: config_ntp and ansible_os_family == "Debian"
+
+- name: req-032.4 change ntp.conf
+  template:
+    src: '{{ ntp_config_file }}'
+    dest: '/etc/{{ntp_software}}.conf'
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart ntp
+  when: config_ntp
+
+- name: req-032.5 change chronyd file
+  lineinfile:
+    dest: '/etc/sysconfig/chronyd'
+    regexp: '^OPTIONS=(.*)'
+    line: 'OPTIONS="-u chrony"'
+  when: config_ntp and ansible_os_family == "RedHat"
+
+# Req 33:	Auditd service must be used to log security relevant events.
+
+- name: req-033.1 check if auditd is installed
+  package:
+    name: '{{ audit_deamon }}'
+    state: present
+  when: config_auditd
+
+- name: req-033.2 enable logging before auditd starts
+  lineinfile:
+    path: '/etc/default/grub'
+    regexp: ^GRUB_CMDLINE_LINUX=(.*)"
+    line: GRUB_CMDLINE_LINUX="audit=1"
+    state: present
+  notify: update grub
+  when: config_grub_logging
+
+- name: req-033.3 check max size for log rotate in auditd.conf
+  lineinfile:
+    path: '/etc/audit/auditd.conf'
+    regexp: '^max_log_file ='
+    line: 'max_log_file = {{ auditd_file_size }}'
+    state: present
+  when: config_auditd and config_log_rotate
+
+- name: req-033.4 check if rotate is enabled for auditd
+  lineinfile:
+    path: '/etc/audit/auditd.conf'
+    regexp: '^num_logs ='
+    line: 'num_logs = {{ auditd_num_logs }}'
+    state: present
+  notify: restart auditd
+  when: config_auditd and config_log_rotate
+
+- name: req-033.5 check if rotate is enabled for auditd
+  lineinfile:
+    path: '/etc/audit/auditd.conf'
+    regexp: '^max_log_file_action ='
+    line: 'max_log_file_action = {{ auditd_rotate_action }}'
+    state: present
+  notify: restart auditd
+  when: config_auditd and config_log_rotate
+
+# Req 34:	System events must be logged.
+# Req 35:	Access and Authentication events must be logged.
+# Req 36:	Account and Group Management events must be logged.
+# Req 37:	Configuration Change events must be logged.
+
+- name: req-034-37.1 configure logging events
+  template:
+    src: 'audit-rules.j2'
+    dest: "{{ audit_rules_file }}"
+    owner: root
+    group: root
+    mode: 0640
+    backup: yes
+  notify: restart auditd
+  when: config_auditd
+
+- name: req-035.2 search for privileged commands
+  shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f \( -perm -4000 -o -perm -2000 \) -print 2>/dev/null
+  register: priv_commands
+  changed_when: false
+  when: config_auditd and config_access_events
+
+- name: req-035.3 configure logging for priviledged commands
+  lineinfile:
+    path: "{{ audit_rules_file }}"
+    insertafter: EOF
+    line: '-a always,exit -F path={{ item }} -F perm=x -F auid>=1000 -F auid!=4294967295 -k privileged'
+    state: present
+  with_items: '{{ priv_commands.stdout_lines }}'
+  notify: restart auditd
+  when: config_auditd and config_access_events
+
+# Req 38:	Auditd configuration must be immutable.
+
+- name: req-038.1 make audit configuration immutable
+  lineinfile:
+    path: "{{ audit_rules_file }}"
+    insertafter: EOF
+    line: '-e 2'
+    state: present
+  when: config_auditd and and config_auditd_immutable
+
+# Req 39:	Security relevant logging data must be send to an external system direct
+# after their creation.
+
+- name: req-039.1 install syslog server solution
+  package:
+    name: '{{ syslog_type }}'
+    state: present
+  when: config_syslog
+
+# Req 40:	If RSyslog is used, the default permission of 640 or more restrictive
+# for logfiles must be configured.
+
+- name: req-040.1 configure rsyslog default file permission
+  lineinfile:
+    path: '/etc/rsyslog.conf'
+    state: present
+    regexp: '^\$FileCreateMode.*'
+    line: '$FileCreateMode {{ rsyslog_permissions }}'
+  notify: restart rsyslog
+  when: config_syslog and syslog_type == "rsyslog"
+
+# Req 41:	If RSyslog is used, at least one central logging server must be
+# configured.
+
+- name: req-041.1 configure logging server
+  lineinfile:
+    dest: '/etc/rsyslog.conf'
+    state: present
+    line: '*.* @{{ syslog_server }}:514'
+  notify: restart rsyslog
+  when: config_syslog and syslog_type == "rsyslog"
+
+# Req 42:	If Syslog-NG is used, the default permission of 640 or more restrictive
+# for logfiles must be configured.
+
+# Req 43:	If Syslog-NG is used, at least one central logging server must be
+# configured.

@@ -1,0 +1,412 @@
+---
+# ------------------------------------------------------------------------
+# Telekom Security - Compliance Automation - Hardening
+# Linux OS for Servers (3.65)
+# Tasks: 01 Basic Hardening
+# ------------------------------------------------------------------------
+
+# Req 1: Unused services and protocols must be deactivated.
+
+- name: req-001.1 stop rpcbind (14.04)
+  service:
+    name: rpcbind
+    state: stopped
+  ignore_errors: yes
+  when: disable_rpcbind and ansible_distribution_version == "14.04"
+
+- name: req-001.2 disable rpcbind (14.04)
+  shell: update-rc.d -f rpcbind remove
+  register: rpcbind_result
+  changed_when: false
+  failed_when: "'Removing' not in rpcbind_result.stdout"
+  when: disable_rpcbind and ansible_distribution_version == "14.04"
+
+- name: req-001.3 disable rpcbind (CentOS)
+  systemd:
+    name: rpcbind
+    state: stopped
+    enabled: no
+  ignore_errors: yes
+  when: disable_rpcbind and ansible_distribution_version != "14.04"
+
+- name: req-001.4 stop rsync (14.04)
+  service:
+    name: "{{ rsync_deamon }}"
+    state: stopped
+  when: disable_rpcbind and ansible_distribution_version == "14.04"
+
+- name: req-001.5 disable rsync (14.04)
+  shell: update-rc.d -f "{{ rsync_deamon }}" remove
+  register: rsync_result
+  changed_when: false
+  failed_when: "'Removing' not in rsync_result.stdout"
+  when: disable_rsync and ansible_distribution_version == "14.04"
+
+- name: req-001.6 disable rsync service (not 14.04)
+  systemd:
+    name: "{{ rsync_deamon }}"
+    state: stopped
+    enabled: no
+  when: disable_rsync and ansible_distribution_version != "14.04"
+
+# Req 2: The reachability of services must be restricted.
+
+# Req 3: Unused software must not be installed or must be uninstalled.
+
+- name: req-003.1 uninstall servers
+  package:
+    name: '{{ item }}'
+    state: absent
+  with_items: '{{ servers }}'
+  when: uninstall_servers
+
+- name: req-003.2 uninstall clients
+  package:
+    name: '{{ item }}'
+    state: absent
+  with_items: '{{ clients }}'
+  when: uninstall_clients
+
+# Req 4:	Unused filesystems must be disabled.
+
+- name: req-004.1 install modprobe
+  package:
+    name: '{{ modprobe_package }}'
+    state: present
+  when: disable_filesystems
+
+- name: req-004.2 disable unused filesystems
+  template:
+    src: 'modprobe.j2'
+    dest: '/etc/modprobe.d/disable.conf'
+    owner: root
+    group: root
+    mode: 0640
+  when: disable_filesystems
+
+- name: req-004.3 check loaded kernel modules
+  modprobe:
+    name: '{{ item }}'
+    state: absent
+  with_items:
+    - "{{ filesystems }}"
+  when: disable_filesystems
+
+# Req 5:	Dedicated partitions must be used for growing content that can
+# influence the availability of the system.
+
+# Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where
+# this is applicable.
+
+# Req 7:	Automounting must be disabled.
+
+- name: req-007.1 uninstall autofs
+  package:
+    name: 'autofs'
+    state: absent
+  when: uninstall_autofs
+
+# Req 8: The use of at/cron must be restricted to authorized users.
+
+- name: req-008.1 delete cron & at allow files
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "/etc/cron.deny"
+    - "/etc/at.deny"
+  when: config_cron
+
+- name: req-008.2 generate cron & at allow files
+  file:
+    path: "{{ item }}"
+    state: touch
+    owner: root
+    group: root
+    mode:  "og-rwx"
+  with_items:
+    - "/etc/cron.allow"
+    - "/etc/at.allow"
+  when: config_cron
+
+# Req 9: Sticky bit must be set on all world-writable directories.
+
+- name: req-009.1 search for world-writable directories
+  shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type d -perm -0002 \! -perm -1000 2>/dev/null
+  register: check_directories
+  changed_when: false
+  when: config_worldwritable_directories
+
+- name: req-009.2 set sticky bit for world-writable directories
+  file:
+    path: "{{ item }}"
+    mode: o+t
+    state: directory
+  with_items: "{{ check_directories.stdout_lines | default([]) }}"
+  when: check_directories.stdout != ""
+
+# Req 10: No regular files that are world writable must exist.
+
+- name: req-010.1 search for world-writable files
+  shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f -perm -0002 2>/dev/null
+  register: check_files
+  changed_when: false
+  when: config_worldwritable_files == true
+
+- name: req-010.2 change permissions of world-writable files
+  file:
+    path: "{{ item }}"
+    mode: o-w
+  with_items: "{{ check_files.stdout_lines | default([]) }}"
+  when: check_files.stdout != ""
+
+# Req 11:	Passwords must be protected with an appropriate hashing function.
+
+- name: req-011.1 set password encryption to sha-512 in login.defs
+  lineinfile:
+    dest: '/etc/login.defs'
+    state: present
+    regexp: '^ENCRYPT_METHOD*'
+    line: 'ENCRYPT_METHOD SHA512'
+  when: config_sha512
+
+- name: req-011.2 set max rounds for sha-512
+  lineinfile:
+    dest: '/etc/login.defs'
+    state: present
+    regexp: '^SHA_CRYPT_MAX_ROUNDS*'
+    line: 'SHA_CRYPT_MAX_ROUNDS {{ sha512_rounds_max }}'
+  when: config_sha512
+
+- name: req-011.3 set min rounds for sha-512
+  lineinfile:
+    dest: '/etc/login.defs'
+    state: present
+    regexp: '^SHA_CRYPT_MIN_ROUNDS*'
+    insertafter: '^ENCRYPT_METHOD SHA512'
+    line: 'SHA_CRYPT_MIN_ROUNDS {{ sha512_rounds_min }}'
+  when: config_sha512
+
+# Req 12: The default user umask must be 027 or more restrictive.
+
+- name: req-012.1 check default umask for users
+  lineinfile:
+    dest: '/etc/login.defs'
+    line: 'UMASK {{ umask }}'
+    regexp: '^UMASK'
+    state: present
+  when: config_umask
+
+# Req 13:	Not needed SUID and SGID bits must be removed from executables.
+
+- name: req-013.1 remove suid/sgid bit from binaries in blacklist
+  file:
+    path: '{{ item }}'
+    mode: 'a-s'
+    state: 'file'
+    follow: 'yes'
+  with_items:
+    - "{{ suid_sgid_blacklist }}"
+  when: config_suid_sgid
+
+- name: req-013.2 find binaries with suid/sgid set
+  shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f \( -perm -4000 -o -perm -2000 \) -print 2>/dev/null
+  register: sbit_binaries
+  changed_when: false
+  when: config_suid_sgid
+
+- name: req-013.3 combine found files with default whitelist
+  set_fact:
+    suid: '{{ sbit_binaries.stdout_lines | difference(suid_sgid_whitelist) }}'
+  when: config_suid_sgid
+
+- name: req-013.4 remove suid/sgid bit from all binaries except whitelists
+  file:
+    path: '{{ item }}'
+    mode: 'a-s'
+    state: 'file'
+    follow: 'yes'
+  with_items:
+    - "{{ suid }}"
+  when: config_suid_sgid
+
+# Req 14:	Core dumps must be disabled.
+
+- name: req-014.1 create limits.d-directory
+  file:
+    path: '/etc/security/limits.d'
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  when: config_coredumps
+
+- name: req-014.2 create file limits.conf
+  template:
+    src: 'limits-conf.j2'
+    dest: '/etc/security/limits.d/10.hardcore.conf'
+    owner: root
+    group: root
+    mode: 0440
+  when: config_coredumps
+
+- name: reg-014.3 check sysctl-settings for coredumps
+  sysctl:
+    name: '{{ item.key }}'
+    value: '{{ item.value }}'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  with_dict: '{{ coredumps }}'
+  when: config_coredumps
+
+# Req 15:	Protection against buffer overflows must be enabled.
+
+- name: req-015.1 check if nx is enabled in bios
+  shell: dmesg | awk -F' ' '{if ($3 == "NX") print $7}'
+  register: check_nx
+  failed_when: check_nx.stdout != "active"
+  changed_when: false
+  when: config_buffer_overflow_protection
+
+- name: reg-015.2 check sysctl-settings for buffer overflow protection
+  sysctl:
+    name: '{{ item.key }}'
+    value: '{{ item.value }}'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  with_dict: '{{ buffer_overflow_protection }}'
+  when: config_buffer_overflow_protection
+
+# Req 16:	Prelink must not be used.
+
+- name: req-016.1 uninstall prelink
+  package:
+    name: 'prelink'
+    state: absent
+  when: uninstall_prelink and ansible_os_family != "RedHat"
+
+# Req 17:	IPv4 protocol stack must be securely configured.
+
+- name: req-017.1 change sysctl-settings for ipv4
+  sysctl:
+    name: '{{ item.key }}'
+    value: '{{ item.value }}'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  with_dict: '{{ network_config_ipv4 }}'
+  when: config_network_ipv4
+
+# Req 18:	IPv6 protocol stack must be securely configured.
+
+- name: req-018.1 change sysctl-settings if ipv6 is disabled
+  sysctl:
+    name: '{{ item.key }}'
+    value: '{{ item.value }}'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  with_dict: '{{ network_config_ipv6_disabled }}'
+  when: config_network_ipv6 and not config_ipv6_enable
+
+- name: req-018.2 change sysctl-settings if ipv6 is enabled
+  sysctl:
+    name: '{{ item.key }}'
+    value: '{{ item.value }}'
+    sysctl_set: yes
+    state: present
+    reload: yes
+  with_dict: '{{ network_config_ipv6_enabled }}'
+  when: config_network_ipv6 and
+     ( config_ipv6_enable or config_mgmt_interface_ipv6 )
+
+# Req 19:	Emerged vulnerabilities in software and hardware of a system must be
+# fixed or protected against misuse.
+
+# System update must be done before security configuration. For this tasks
+# to update system is placed at the beginning in /tasks/main.yml.
+
+# Req 20: GPG check for repository server must be activated and corresponding
+# keys for trustable repositories must be configured.
+
+# Req 21:	User accounts must be used that allow unambiguous identification of
+# the user.
+
+# Req 22:	System accounts must be non-login.
+
+- name: req-022.1 check for system accounts with login
+  shell: awk -F':' '($1!="root" && $1!="sync" && $1!="shutdown" && $1!="halt" && $3<{{ uid_max }} && $7=="/bin/bash") {print $1}' /etc/passwd
+  register: check_sys_accounts
+  changed_when: false
+  when: config_nologin_sys_accounts
+
+- name: req-022.2 disable login for system accounts
+  shell: /usr/sbin/usermod -s {{ nologin_path }} {{ item }}
+  with_items: "{{check_sys_user.stdout_lines}}"
+  when: config_nologin_sys_accounts and check_sys_user.stdout != ""
+
+# Req 23:	User accounts must be protected against unauthorized usage by at least
+# one authentication attribute.
+
+- name: req-023.1 check for user accounts without password
+  shell: awk -F":" '($2 == "" && $2 != "!" && $2 !="*") {print $1}' /etc/shadow
+  register: user_without_pw
+  changed_when: false
+  when: config_user_without_pw
+
+- name: req-023.2 lock accounts without password
+  shell: passwd -l "{{ item }}"
+  with_items: "{{ user_without_pw.stdout_lines }}"
+  when: config_user_without_pw and user_without_pw.stdout != ""
+
+# Req 24:	User accounts with extensive rights must be protected with two
+# authentication attributes.
+
+# Req 25:	The system must be connected to a central system for user administration.
+
+# Req 26:	Authentication must be used for single user mode.
+
+- name: req-26.1 check if root has a password set
+  shell: grep "^root:[*\!]:" /etc/shadow
+  register: check_root_pw
+  changed_when: false
+  when: ansible_distribution == "Ubuntu" and
+      ( config_single_user_mode and config_root_password )
+
+- name: req-026.2 generate a secret root password
+  shell: date +%s | sha256sum | base64 | head -c 15 ; echo
+  register: root_password
+  changed_when: false
+  when:
+    - ansible_distribution == "Ubuntu"
+    - config_root_password
+    - check_root_pw.stdout != ""
+
+- name: req-026.3 set root password
+  shell: printf "{{ root_password }}\n{{ root_password }}" | passwd root
+  changed_when: false
+  when:
+    - ansible_distribution == "Ubuntu"
+    - config_root_password
+    - check_root_pw.stdout != ""
+
+- name: req-026.4 set single user mode
+  lineinfile:
+    dest: '{{ item }}'
+    state: present
+    regexp: '^ExecStart=*'
+    line: 'ExecStart=-/bin/sh -c "/usr/sbin/sulogin; /usr/bin/systemctl --fail --no-block default"'
+  with_items:
+    - "/usr/lib/systemd/system/rescue.service"
+    - "/usr/lib/systemd/system/emergency.service"
+  when: ansible_os_family == "RedHat" and config_single_user_mode
+
+# Req 27: The management of the operating system must be done via a dedicated
+# management network which is independent from the production network.
+
+# Req 28:	Management services must be bound to the management network.
+
+# Req 29: Encrypted protocols must be used for management access to administrate
+# the operating system.

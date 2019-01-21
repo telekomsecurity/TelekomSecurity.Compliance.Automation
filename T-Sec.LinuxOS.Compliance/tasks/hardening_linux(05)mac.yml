@@ -1,0 +1,268 @@
+---
+# ------------------------------------------------------------------------
+# Telekom Security - Compliance Automation - Hardening
+# Linux OS for Servers (3.65)
+# Tasks: 05 MAC
+# ------------------------------------------------------------------------
+
+# Req 52:	If a system has Internet facing services or is a virtualization host,
+# a MAC solution must be used.
+
+- name: req-043.0 install mandatory access control solution
+  package:
+    name: '{{ use_mac_package }}'
+    state: present
+  when: config_mac == true
+
+# ----- Compliance -----
+
+- block:
+    - name: req-043.0 check if mac solution is installed
+      package:
+        name: '{{ use_mac_package }}'
+        state: absent
+      register: check_mac
+      failed_when: check_mac.changed == true
+      changed_when: false
+  rescue:
+    - debug:
+        msg: "WARNING: MAC solution {{ use_mac_type }} is not installed!"
+
+# Req 53:	If SELinux is used, it must not be disabled in bootloader configuration.
+
+- name: req-044.1 enable selinux in grub
+  lineinfile:
+    dest: '/etc/default/grub'
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=(.*)'
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"'
+  notify: update grub
+  when: ( config_mac == true and config_mac_grub == true ) and
+        ( use_mac_type == "selinux" and config_bootloader_grub == true )
+
+- name: req-044.2 enable selinux in grub
+  lineinfile:
+    dest: '/etc/default/grub'
+    regexp: '^GRUB_CMDLINE_LINUX=(.*)'
+    line: 'GRUB_CMDLINE_LINUX=""'
+  notify: update grub
+  when: ( config_mac == true and config_mac_grub == true ) and
+        ( use_mac_type == "selinux" and config_bootloader_grub == true )
+
+# ----- Compliance -----
+
+- block:
+    - name: req-044.1 enable selinux in grub
+      lineinfile:
+        dest: '/etc/default/grub'
+        regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=(.*)'
+        line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"'
+      register: check_sel_grub_1
+      failed_when: (check_sel_grub_1 is changed)
+  rescue:
+    - debug:
+        msg: "WARNING: SELinux is not enabled in grub!"
+  when: use_mac_type == "selinux" and
+        ( config_mac == true and check_mac.changed == true )
+
+- block:
+    - name: req-044.2 enable selinux in grub
+      lineinfile:
+        dest: '/etc/default/grub'
+        regexp: '^GRUB_CMDLINE_LINUX=(.*)'
+        line: 'GRUB_CMDLINE_LINUX=""'
+      register: check_sel_grub_2
+      failed_when: (check_sel_grub_2 is changed)
+  rescue:
+    - debug:
+        msg: "WARNING: SELinux is not enabled in grub!"
+  when: use_mac_type == "selinux" and
+        ( config_mac == true and check_mac.changed == true )
+
+# Req 54:	If SELinux is used, its state must be enforced.
+
+- name: req-045.0 enforce selinux state
+  lineinfile:
+    dest: '/etc/selinux/config'
+    regexp: '^SELINUX=(.*)'
+    line: 'SELINUX=enforcing'
+  when: config_mac == true and
+        ( config_sel_enforced == true and use_mac_type == "selinux" )
+
+# ----- Compliance -----
+
+- block:
+    - name: req-045.0 enforce selinux state
+      lineinfile:
+        dest: '/etc/selinux/config'
+        regexp: '^SELINUX=(.*)'
+        line: 'SELINUX=enforcing'
+      register: check_sel_enforcing
+      failed_when: (check_sel_enforcing is changed)
+  rescue:
+    - debug:
+        msg: "WARNING: SELinux is not in enforce state!"
+  when: use_mac_type == "selinux" and
+        ( config_mac == true and check_mac.changed == true )
+
+# Req 55:	If SELinux is used, the policy must be configured.
+
+- name: req-046.0 configure selinux policy
+  lineinfile:
+    dest: '/etc/selinux/config'
+    regexp: '^SELINUXTYPE=(.*)'
+    line: 'SELINUXTYPE={{ use_selinux_type }}'
+  when: config_mac == true and
+        ( config_sel_policy == true and use_mac_type == "selinux" )
+
+# ----- Compliance -----
+
+- block:
+    - name: req-046.0 configure selinux policy
+      lineinfile:
+        dest: '/etc/selinux/config'
+        regexp: '^SELINUXTYPE=(.*)'
+        line: 'SELINUXTYPE={{ selinux_type }}'
+        register: check_sel_policy
+        failed_when: (check_sel_policy is changed)
+    - debug:
+        msg: "WARNING: SELinux policy is not configured!"
+  when: use_mac_type == "selinux" and
+      ( config_mac == true and check_mac.changed == true )
+
+# Req 56:	If SELinux is used, SETroubleshoot and MCS Translation Service must
+# not be installed.
+
+- name: req-047.0 deinstall not needed selinux tools are installed
+  package:
+    name: '{{ item }}'
+    state: absent
+  with_items: "{{ disable_sel_tools }}"
+  when: config_mac == true and
+        ( config_disable_sel_tools == true and ansible_os_family == "RedHat" )
+
+# ----- Compliance -----
+
+- block:
+    - name: req-047.0 check if not needed selinux tools are installed
+      package:
+        name: '{{ item }}'
+        state: absent
+      register: check_sel_tools
+      failed_when: (check_sel_tools is changed)
+      changed_when: false
+      with_items: "{{ disable_sel_tools }}"
+  rescue:
+    - debug:
+        msg: "WARNING: SETroubleshooter and/or MCS Translation Service are installed!"
+  when: (use_mac_type == "selinux" and ansible_os_family == "RedHat" ) and
+        ( config_mac == true and check_mac.changed == true )
+
+# Req 57:	If SELinux is used, events must be logged if configuration of SELinux
+# is modified.
+
+# -w /etc/selinux/ -p wa -k MAC-policy
+# -w /usr/share/selinux/ -p wa -k MAC-policy
+
+# ----- Compliance -----
+
+# grep MAC-policy /etc/audit/audit.rules
+# -w /etc/selinux/ -p wa -k MAC-policy
+# -w /usr/share/selinux/ -p wa -k MAC-policy
+
+# Req 58:	If AppArmor is used, it must not be disabled in bootloader configuration.
+
+- name: req-044.1 enable apparmor in grub
+  lineinfile:
+    dest: '/etc/default/grub'
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=(.*)'
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"'
+  notify: update grub
+  when: ( config_mac == true and config_mac_grub == true ) and
+        ( use_mac_type == "apparmor" and config_bootloader_grub == true )
+
+- name: req-044.2 enable apparmor in grub
+  lineinfile:
+    dest: '/etc/default/grub'
+    regexp: '^GRUB_CMDLINE_LINUX=(.*)'
+    line: 'GRUB_CMDLINE_LINUX=""'
+  notify: update grub
+  when: ( config_mac == true and config_mac_grub == true ) and
+        ( use_mac_type == "apparmor" and config_bootloader_grub == true )
+
+# ----- Compliance -----
+
+- block:
+    - name: req-044.1 check if apparmor is enabled in grub
+      lineinfile:
+        dest: '/etc/default/grub'
+        regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=(.*)'
+        line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"'
+      register: check_aa_grub_1
+      failed_when: (check_aa_grub_1 is changed)
+  rescue:
+    - debug:
+        msg: "WARNING: AppArmor is not enabled in grub!"
+  when: use_mac_type == "apparmor" and
+        ( config_mac == true and check_mac.changed == true )
+
+- block:
+    - name: req-044.2 check if apparmor is enabled in grub
+      lineinfile:
+        dest: '/etc/default/grub'
+        regexp: '^GRUB_CMDLINE_LINUX=(.*)'
+        line: 'GRUB_CMDLINE_LINUX=""'
+      register: check_aa_grub_2
+      failed_when: (check_aa_grub_2 is changed)
+  rescue:
+    - debug:
+        msg: "WARNING: AppArmor is not enabled in grub!"
+  when: use_mac_type == "apparmor" and
+        ( config_mac == true and check_mac.changed == true )
+
+# Req 59:	AppArmor is used, its state must be enforced.
+
+- name: req-048.1 install apparmor-utils to enforce profiles
+  package:
+    name: 'apparmor-utils'
+    state: present
+  when: config_mac == true and
+       ( use_mac_type == "apparmor" == config_aa_enforced == true)
+
+- name: req-048.2 enforce apparmor profiles
+  shell: aa-enforce /etc/apparmor.d/usr* >/dev/null 2>&1
+  changed_when: false
+  when: config_mac == true and
+       ( use_mac_type == "apparmor" == config_aa_enforced == true)
+
+# ----- Compliance -----
+
+- block:
+    - name: req-048.1 check if apparmor-utils are installed
+      package:
+        name: 'apparmor-utils'
+        state: present
+      register: check_aa_utils
+      failed_when: (check_aa_utils is changed)
+    - name: req-061.2 enforce apparmor profiles
+      shell: aa-unconfined 2>/dev/null | grep "not confined"| wc -l
+      register: check_aa_profiles
+      failed_when: check_aa_profiles.stdout != "0"
+      changed_when: false
+      check_mode: no
+      when: check_aa_utils.changed == false
+  rescue:
+    - debug:
+        msg: "WARNING: AppArmor profiles are not propper enforced!"
+  when: use_mac_type == "apparmor" and
+        ( config_mac == true and check_mac.changed == true )
+
+# Req 60:	If AppArmor is used, events must be logged if configuration of AppArmor
+# is modified.
+
+# -w /etc/apparmor/ -p wa -k MAC-policy
+# -w /etc/apparmor.d/ -p wa -k MAC-policy
+
+# ----- Compliance -----
+
+# grep MAC-policy /etc/audit/audit.rules
+# auditctl -l | grep MAC-policy

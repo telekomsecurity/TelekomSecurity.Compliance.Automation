@@ -1,0 +1,265 @@
+---
+# ------------------------------------------------------------------------
+# Telekom Security - Compliance Automation - Hardening
+# Linux OS for Servers (3.65)
+# Tasks: 04 IPTables
+# ------------------------------------------------------------------------
+
+# Req 48:	If iptables is used, policies for loopback traffic must be configured.
+
+- name: req-003.1 configure loopback traffic input rule
+  iptables:
+    chain: INPUT
+    in_interface: lo
+    jump: ACCEPT
+  when: config_iptables == true and config_iptables_loopback == true
+
+- name: req-003.2 configure loopback traffic output rule
+  iptables:
+    chain: OUTPUT
+    out_interface: lo
+    jump: ACCEPT
+  when: config_iptables == true and config_iptables_loopback == true
+
+- name: req-003.3 configure loopback traffic drop rule
+  iptables:
+    chain: INPUT
+    source: 127.0.0.0/8
+    jump: DROP
+  when: config_iptables == true and config_iptables_loopback == true
+
+# --- Compliance ---
+
+- block:
+    - name: req-003.1 check for loopback traffic input rule
+      iptables:
+        chain: INPUT
+        in_interface: lo
+        jump: ACCEPT
+      register: check_iptables_3_1
+      failed_when: check_iptables_3_1.changed == true
+  rescue:
+    - debug:
+        msg: "WARNING: IPtables rule for loopback traffic input is missing!"
+  when: config_iptables == true and check_iptables_2.changed == true
+
+- block:
+    - name: req-003.2 check for loopback traffic output rule
+      iptables:
+        chain: OUTPUT
+        in_interface: lo
+        jump: ACCEPT
+      register: check_iptables_3_2
+      failed_when: check_iptables_3_2.changed == true
+  rescue:
+    - debug:
+        msg: "WARNING: IPtables rule for loopback traffic output is missing!"
+  when: config_iptables == true and check_iptables_2.changed == true
+
+- block:
+    - name: req-003.3 check for loopback traffic drop rule
+      iptables:
+        chain: INPUT
+        source: 127.0.0.0/8
+        jump: DROP
+      register: check_iptables_3_3
+      failed_when: check_iptables_3_3.changed == true
+  rescue:
+    - debug:
+        msg: "WARNING: IPtables rule for loopback traffic is missing!"
+  when: config_iptables == true and check_iptables_2.changed == true
+
+# Req 49:	If iptables is used, policies for outbound and established connections
+# must be configured.
+
+- name: req-004.1 configure outbound connections
+  iptables:
+    chain: OUTPUT
+    protocol: '{{ item }}'
+    match: state
+    ctstate: NEW,ESTABLISHED
+    jump: ACCEPT
+  with_items:
+    - 'tcp'
+    - 'udp'
+    - 'icmp'
+  when: config_iptables == true and config_iptables_outbound == true
+
+- name: req-004.2 configure inbound connections
+  iptables:
+    chain: INPUT
+    protocol: '{{ item }}'
+    match: state
+    ctstate: ESTABLISHED
+    jump: ACCEPT
+  with_items:
+    - 'tcp'
+    - 'udp'
+    - 'icmp'
+  when: config_iptables == true and config_iptables_outbound == true
+
+# --- Compliance ---
+
+- block:
+    - name: req-004.1 check for outbound connections rules
+      iptables:
+        chain: OUTPUT
+        protocol: '{{ item }}'
+        match: state
+        ctstate: NEW,ESTABLISHED
+        jump: ACCEPT
+      with_items:
+        - 'tcp'
+        - 'udp'
+        - 'icmp'
+      register: check_iptables_4_1
+      failed_when: check_iptables_4_1.changed == true
+  rescue:
+    - debug:
+        msg: "WARNING: IPtables rules for outbound connections are missing!"
+  when: config_iptables == true and check_iptables_2.changed == true
+
+
+- block:
+    - name: req-004.1 check for inbound connections rules
+      iptables:
+        chain: INPUT
+        protocol: '{{ item }}'
+        match: state
+        ctstate: ESTABLISHED
+        jump: ACCEPT
+      with_items:
+        - 'tcp'
+        - 'udp'
+        - 'icmp'
+      register: check_iptables_4_2
+      failed_when: check_iptables_4_2.changed == true
+  rescue:
+    - debug:
+        msg: "WARNING: IPtables rules for inbound connections are missing!"
+  when: config_iptables == true and check_iptables_2.changed == true
+
+# Req 50:	If iptables is used, policies must exist for all ports in listening
+# state.
+
+- name: req-005.1 configure rules for ssh
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ item }}"
+    match: state
+    ctstate: NEW
+    jump: ACCEPT
+  with_items: "{{ use_ssh_server_ports }}"
+  when: config_iptables == true and
+       ( config_ssh_server == true and config_iptables_rules == true )
+
+- name: req-005.2 configure rules for udp
+  iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: "{{ item }}"
+    match: state
+    ctstate: NEW
+    jump: ACCEPT
+  with_items: "{{ set_iptables_ports_udp }}"
+  when: config_iptables == true and
+       ( config_iptables_rules_udp == true and config_iptables_rules == true )
+
+- name: req-005.3 configure rules for tcp
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ item }}"
+    match: state
+    ctstate: NEW
+    jump: ACCEPT
+  with_items: "{{ set_iptables_ports_tcp }}"
+  when: config_iptables == true and
+       ( config_iptables_rules_tcp == true and config_iptables_rules == true )
+
+# --- Compliance ---
+
+- block:
+    - name: req-005.1 check rules for ssh
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "{{ item }}"
+        match: state
+        ctstate: NEW
+        jump: ACCEPT
+      with_items: "{{ use_ssh_server_ports }}"
+      register: check_iptables_5_1
+      failed_when: check_iptables_5_1.changed == true
+  rescue:
+    - debug:
+        msg: "WARNING: IPtables rule for ssh is missing!"
+  when: config_iptables == true and check_iptables_2.changed == true
+
+- block:
+    - name: req-005.2 configure rules for udp
+      iptables:
+        chain: INPUT
+        protocol: udp
+        destination_port: "{{ item }}"
+        match: state
+        ctstate: NEW
+        jump: ACCEPT
+      with_items: "{{ set_iptables_ports_udp }}"
+      register: check_iptables_5_2
+      failed_when: check_iptables_5_2.changed == true
+  rescue:
+    - debug:
+        msg: "WARNING: IPtables rules for udp services are missing!"
+  when: config_iptables == true and
+        ( config_iptables_rules_udp == true and check_iptables_2.changed == true)
+
+- block:
+    - name: req-005.3 configure rules for tcp
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "{{ item }}"
+        match: state
+        ctstate: NEW
+        jump: ACCEPT
+      with_items: "{{ set_iptables_ports_tcp }}"
+      register: check_iptables_5_3
+      failed_when: check_iptables_5_3.changed == true
+  rescue:
+    - debug:
+        msg: "WARNING: IPtables rules for tcp services are missing!"
+  when: config_iptables == true and
+        ( config_iptables_rules_tcp == true and check_iptables_2.changed == true)
+
+# Req 51:	If iptables is used, the default policy must be configured to drop all
+# traffic.
+
+- name: req-006.0 configure default deny policies
+  iptables:
+    chain: '{{ item }}'
+    policy: DROP
+  with_items:
+    - 'INPUT'
+    - 'OUTPUT'
+    - 'FORWARD'
+  when: config_iptables == true and config_iptables_default == true
+
+# --- Compliance ---
+
+- block:
+    - name: req-006.0 check for default deny policies
+      iptables:
+        chain: '{{ item }}'
+        policy: DROP
+      with_items:
+        - 'INPUT'
+        - 'OUTPUT'
+        - 'FORWARD'
+      register: check_iptables_6
+      failed_when: check_iptables_6.changed == true
+  rescue:
+    - debug:
+        msg: "WARNING: IPtables default poloicies are missing!"
+  when: config_iptables == true and check_iptables_2.changed == true

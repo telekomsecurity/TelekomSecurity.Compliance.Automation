@@ -1,70 +1,18 @@
 ---
 # ------------------------------------------------------------------------
-# Telekom Security - Compliance Automation
+# Telekom Security - Compliance Automation - Compliance Checks
 # SSH (3.04)
-# Tasks: 01 SSH Requierments
+# Tasks: 01 SSH Requirements
 # ------------------------------------------------------------------------
 
-# --- Hardening ---------------------------------------------------------------
+# ========================================================================
+# Verification if playbook is started with '--check' option. If not throw
+# error and end play!
+- fail:
+    msg: "WARNING: Playbooks for compliance checks must be started with '--check' option!"
+  when: ansible_check_mode == false
+# ========================================================================
 
-# Req 1:	The SSH protocol version 2 must be used.
-# Req 2:	SSH moduli smaller than 2048 must not be used.
-
-- name: req-002.1 check if /etc/ssh/moduli for short values
-  shell: awk '$5 < {{ moduli_minimum }}' /etc/ssh/moduli
-  register: ssh_moduli
-  changed_when: false
-  when: config_ssh_server and not ansible_check_mode
-
-- name: req-002.1 remove all primes smaller than defined value
-  shell: awk '$5 >= {{ moduli_minimum }}' /etc/ssh/moduli > /etc/ssh/moduli.new ;
-         [ -r /etc/ssh/moduli.new -a -s /etc/ssh/moduli.new ] && mv /etc/ssh/moduli.new /etc/ssh/moduli || true
-  notify: restart sshd
-  when: config_ssh_server and
-        ( not ansible_check_mode and ssh_moduli.stdout != "" )
-
-# Req 3:	Only approved key exchange algorithms must be used.
-# Req 4:	Only approved ciphers algorithms must be used.
-# Req 5:	Only approved MAC algorithms must be used.
-# Req 6:	SSH logging must be enabled.
-# Req 7:	SSH LoginGraceTime must be set to one minute or less.
-# Req 8:	SSH MaxAuthTries must be set to 5 or less.
-# Req 9:	SSH root login must be disabled.
-# Req 10:	SSH strict mode must be enabled.
-# Req 11:	SSH user authentication must be done with public keys.
-# Req 12:	SSH password authentication must be disabled.
-# Req 13:	SSH IgnoreRhosts must be enabled.
-# Req 14:	SSH HostbasedAuthentication must be disabled.
-# Req 15:	The usage of the SSH service must be restricted to dedicated groups
-# or users.
-# Req 16:	The SSH Idle Timeout Interval must be configured to an adequate time.
-# Req 17:	SSH tunnel devices must be disabled.
-# Req 18:	SSH TCP port forwarding must be disabled.
-# Req 19:	SSH agent forwarding must be disabled.
-# Req 20:	SSH gateway ports must be disabled.
-# Req 21:	SSH X11 forwarding must be disabled.
-# Req 22:	SSH PermitUserEnvironment must be disabled.
-# Req 23:	SSH PermitEmptyPasswords must be disabled.
-# Req 24:	If SFTP is activated, internal server of OpenSSH must be used.
-
-- name: req-024.1 set configuration for sshd (req 1, 3 - 24)
-  template:
-    src: 'sshdconfig.j2'
-    dest: '{{ sshd_conf_file }}'
-    owner: "{{ sshd_conf_owner }}"
-    group: "{{ sshd_conf_group }}"
-    mode: "{{ sshd_conf_mode }}"
-  notify: restart sshd
-  when: config_ssh_server and not ansible_check_mode
-
-- name: req-024.2 generate sftp group
-  group:
-    name: "{{ sftp_group }}"
-    state: present
-  when: config_ssh_server and
-       ( set_sftp_chroot and not ansible_check_mode )
-
-# --- Compliance Check---------------------------------------------------------
 # Req 1:	The SSH protocol version 2 must be used.
 
 - block:
@@ -78,7 +26,6 @@
   rescue:
     - debug:
         msg: "Req-001 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 2:	SSH moduli smaller than 2048 must not be used.
 
@@ -92,7 +39,6 @@
   rescue:
     - debug:
         msg: "Req-002 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 3:	Only approved key exchange algorithms must be used.
 
@@ -107,7 +53,6 @@
   rescue:
     - debug:
         msg: "Req-003 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 4:	Only approved ciphers algorithms must be used.
 
@@ -122,7 +67,6 @@
   rescue:
     - debug:
         msg: "Req-004 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 5:	Only approved MAC algorithms must be used.
 
@@ -137,7 +81,6 @@
   rescue:
     - debug:
         msg: "Req-005 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 6:	SSH logging must be enabled.
 
@@ -155,7 +98,6 @@
   rescue:
     - debug:
         msg: "Req-006 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 7:	SSH LoginGraceTime must be set to one minute or less.
 
@@ -170,7 +112,6 @@
   rescue:
     - debug:
         msg: "Req-007 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 8:	SSH MaxAuthTries must be set to 5 or less.
 
@@ -189,7 +130,6 @@
   rescue:
     - debug:
         msg: "Req-008 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 9:	SSH root login must be disabled.
 
@@ -204,7 +144,6 @@
   rescue:
     - debug:
         msg: "Req-009 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 10:	SSH strict mode must be enabled.
 
@@ -219,7 +158,6 @@
   rescue:
     - debug:
         msg: "Req-010 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 11:	SSH user authentication must be done with public keys.
 
@@ -234,7 +172,6 @@
   rescue:
     - debug:
         msg: "Req-011 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 12:	SSH password authentication must be disabled.
 
@@ -249,7 +186,6 @@
   rescue:
     - debug:
         msg: "Req-012 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 13:	SSH IgnoreRhosts must be enabled.
 
@@ -264,7 +200,6 @@
   rescue:
     - debug:
         msg: "Req-013 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 14:	SSH HostbasedAuthentication must be disabled.
 
@@ -282,7 +217,6 @@
   rescue:
     - debug:
         msg: "Req-014 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 15:	The usage of the SSH service must be restricted to dedicated groups
   # or users.
@@ -298,7 +232,6 @@
   rescue:
     - debug:
         msg: "Req-015 (1/5): FAILED"
-  when: ansible_check_mode
 
 - block:
     - name: req-015.2 check ssh configuration for deny users
@@ -311,7 +244,7 @@
   rescue:
     - debug:
         msg: "Req-015 (2/5): FAILED"
-  when: ansible_check_mode and ssh_deny_users != ""
+  when: ssh_deny_users != ""
 
 - block:
     - name: req-015.3 check ssh configuration for allow user
@@ -324,7 +257,7 @@
   rescue:
     - debug:
         msg: "Req-015 (3/5): FAILED"
-  when: ansible_check_mode and ssh_allow_users != ""
+  when: ssh_allow_users != ""
 
 - block:
     - name: req-015.4 check ssh configuration for deny groups
@@ -337,7 +270,7 @@
   rescue:
     - debug:
         msg: "Req-015 (4/5): FAILED"
-  when: ansible_check_mode and ssh_deny_groups != ""
+  when: ssh_deny_groups != ""
 
 - block:
     - name: req-015.5 check ssh configuration for allow groups
@@ -350,7 +283,7 @@
   rescue:
     - debug:
         msg: "Req-015 (5/5): FAILED"
-  when: ansible_check_mode and ssh_allow_groups != ""
+  when: ssh_allow_groups != ""
 
 # Req 16:	The SSH Idle Timeout Interval must be configured to an adequate time.
 
@@ -369,7 +302,6 @@
   rescue:
     - debug:
         msg: "Req-016 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 17:	SSH tunnel devices must be disabled.
 
@@ -384,7 +316,6 @@
   rescue:
     - debug:
         msg: "Req-017 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 18:	SSH TCP port forwarding must be disabled.
 
@@ -399,7 +330,6 @@
   rescue:
     - debug:
         msg: "Req-018 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 19:	SSH agent forwarding must be disabled.
 
@@ -414,7 +344,6 @@
   rescue:
     - debug:
         msg: "Req-019 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 20:	SSH gateway ports must be disabled.
 
@@ -429,7 +358,6 @@
   rescue:
     - debug:
         msg: "Req-020 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 21:	SSH X11 forwarding must be disabled.
 
@@ -444,7 +372,6 @@
   rescue:
     - debug:
         msg: "Req-021 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 22:	SSH PermitUserEnvironment must be disabled.
 
@@ -459,7 +386,6 @@
   rescue:
     - debug:
         msg: "Req-022 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 23:	SSH PermitEmptyPasswords must be disabled.
 
@@ -474,7 +400,6 @@
   rescue:
     - debug:
         msg: "Req-023 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 24:	If SFTP is activated, internal server of OpenSSH must be used.
 
@@ -489,7 +414,7 @@
   rescue:
     - debug:
         msg: "Req-024 (1/3): FAILED"
-  when: ansible_check_mode and set_sftp_enabled
+  when: set_sftp_enabled
 
 - block:
     - name: req-024.2 check sftp configuration
@@ -508,7 +433,7 @@
   rescue:
     - debug:
         msg: "Req-024 (2/3): FAILED"
-  when: ansible_check_mode and set_sftp_chroot
+  when: set_sftp_chroot
 
 - block:
     - name: req-024.3 check for sftp group
@@ -520,4 +445,4 @@
   rescue:
     - debug:
         msg: "Req-024 (3/3): FAILED"
-  when: ansible_check_mode and set_sftp_chroot
+  when: set_sftp_chroot

@@ -1,62 +1,22 @@
 ---
 # ------------------------------------------------------------------------
-# Telekom Security - Compliance Automation
+# Telekom Security - Compliance Automation - Compliance Checks
 # Linux OS for Servers (3.65)
 # Tasks: 01 Basic Hardening
 # ------------------------------------------------------------------------
 
+# ========================================================================
+# Verification if playbook is started with '--check' option. If not throw
+# error and end play!
+- fail:
+    msg: "WARNING: Playbooks for compliance checks must be started with '--check' option!"
+  when: ansible_check_mode == false
+# ========================================================================
+
 # Req 1: Unused services and protocols must be deactivated.
 
-- name: req-001.1 stop rpcbind (14.04)
-  service:
-    name: rpcbind
-    state: stopped
-  ignore_errors: yes
-  when: not ansible_check_mode and
-       ( disable_rpcbind and ansible_distribution_version == "14.04" )
-
-- name: req-001.2 disable rpcbind (14.04)
-  shell: update-rc.d -f rpcbind remove
-  register: rpcbind_result
-  changed_when: false
-  failed_when: "'Removing' not in rpcbind_result.stdout"
-  when: not ansible_check_mode and
-       ( disable_rpcbind and ansible_distribution_version == "14.04" )
-
-- name: req-001.3 disable rpcbind (CentOS)
-  systemd:
-    name: rpcbind
-    state: stopped
-    enabled: no
-  ignore_errors: yes
-  when: not ansible_check_mode and disable_rpcbind
-      ( disable_rpcbind and ansible_distribution_version != "14.04" )
-
-- name: req-001.4 stop rsync (14.04)
-  service:
-    name: "{{ rsync_deamon }}"
-    state: stopped
-  when: not ansible_check_mode and
-       ( disable_rpcbind and ansible_distribution_version == "14.04" )
-
-- name: req-001.5 disable rsync (14.04)
-  shell: update-rc.d -f "{{ rsync_deamon }}" remove
-  register: rsync_result
-  changed_when: false
-  failed_when: "'Removing' not in rsync_result.stdout"
-  when: not ansible_check_mode and
-       ( disable_rsync and ansible_distribution_version == "14.04" )
-
-- name: req-001.6 disable rsync service (not 14.04)
-  systemd:
-    name: "{{ rsync_deamon }}"
-    state: stopped
-    enabled: no
-  when: not ansible_check_mode and
-       ( disable_rsync and ansible_distribution_version != "14.04" )
-
 - block:
-    - name: req-001.7 check for open tcp ports
+    - name: req-001.1 check for open tcp ports
       shell: ss -nlt 2>/dev/null | awk '($1 == "LISTEN" && $4 !~ /127.0.0.*.:./ && $4 !~ /::*.:./) {print $4}' | sed 's/.*://' | sort -nu
       register: open_tcp_ports
       changed_when: false
@@ -72,10 +32,9 @@
   rescue:
      - debug:
          msg: "Req-001 (1/2): FAILED"
-  when: ansible_check_mode
 
 - block:
-    - name: req-001.8 check for open UDP ports
+    - name: req-001.2 check for open UDP ports
       shell: ss -nlu 2>/dev/null | awk '($1 == "UNCONN" && $4 !~ /127.0.0.*.:./ && $4 !~ /::*.:./) {print $4}' | sed 's/.*://' | sort -nu
       register: open_udp_ports
       changed_when: false
@@ -91,17 +50,16 @@
   rescue:
      - debug:
          msg: "Req-001 (2/2): FAILED"
-  when: ansible_check_mode
 
 # Req 2: The reachability of services must be restricted.
+
 - block:
-    - name: req-002.0 generate dummy failure message
+    - name: req-002.1 generate dummy failure message
       fail:
         msg: "Req 2 can not be checked automatically. Please do manual check!"
   rescue:
     - debug:
         msg: "Req-002 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 3: Unused software must not be installed or must be uninstalled.
 
@@ -112,7 +70,7 @@
         state: absent
       with_items: '{{ servers }}'
       register: check_servers
-      failed_when: check_servers.changed and ansible_check_mode
+      failed_when: check_servers.changed
   rescue:
       - debug:
           msg: "Req-003 (1/2): FAILED"
@@ -125,7 +83,7 @@
         state: absent
       with_items: '{{ clients }}'
       register: check_clients
-      failed_when: check_clients.changed and ansible_check_mode
+      failed_when: check_clients.changed
   rescue:
     - debug:
         msg: "Req-003 (2/2): FAILED"
@@ -133,23 +91,8 @@
 
 # Req 4:	Unused filesystems must be disabled.
 
-- name: req-004.1 install modprobe
-  package:
-    name: '{{ modprobe_package }}'
-    state: present
-  when: disable_filesystems and not ansible_check_mode
-
-- name: req-004.2 disable unused filesystems
-  template:
-    src: 'modprobe.j2'
-    dest: '/etc/modprobe.d/disable.conf'
-    owner: root
-    group: root
-    mode: 0640
-  when: disable_filesystems and not ansible_check_mode
-
 - block:
-    - name: req-004.3 check for modprobe file
+    - name: req-004.1 check for modprobe file
       stat:
         path: '/etc/modprobe.d/disable.conf'
       register: check_file
@@ -166,15 +109,15 @@
   rescue:
     - debug:
         msg: "Req-004 (1/2): FAILED"
-  when: disable_filesystems and ansible_check_mode
+  when: disable_filesystems
 
 - block:
-  - name: req-004.4 check loaded kernel modules
+  - name: req-004.2 check loaded kernel modules
     modprobe:
       name: '{{ item }}'
       state: absent
     register: check_modules
-    failed_when: (check_modules is changed and ansible_check_mode)
+    failed_when: check_modules.changed
     with_items:
       - "{{ filesystems }}"
   rescue:
@@ -198,19 +141,18 @@
   rescue:
     - debug:
         msg: "Req-005 (1/1): FAILED"
-  when: config_partitions and ansible_check_mode
+  when: config_partitions
 
 # Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where
 # this is applicable.
 
 - block:
-    - name: req-006.0 generate dummy failure message
+    - name: req-006.1 generate dummy failure message
       fail:
         msg: "Req 6 can not be checked automatically. Please do manual check!"
   rescue:
     - debug:
         msg: "Req-006 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 7:	Automounting must be disabled.
 
@@ -220,7 +162,7 @@
         name: 'autofs'
         state: absent
       register: check_autofs
-      failed_when: check_autofs.changed and ansible_check_mode
+      failed_when: check_autofs.changed
   rescue:
     - debug:
         msg: "Req-007 (1/1): FAILED"
@@ -234,7 +176,7 @@
       path: "{{ item }}"
       state: absent
     register: check_deny
-    failed_when: check_deny.changed and ansible_check_mode
+    failed_when: check_deny.changed
     with_items:
       - "/etc/cron.deny"
       - "/etc/at.deny"
@@ -243,20 +185,8 @@
         msg: "Req-008 (1/2): FAILED"
   when: config_cron
 
-- name: req-008.2 generate cron & at allow files
-  file:
-    path: "{{ item }}"
-    state: touch
-    owner: root
-    group: root
-    mode:  "og-rwx"
-  with_items:
-    - "/etc/cron.allow"
-    - "/etc/at.allow"
-  when: config_cron and not ansible_check_mode
-
 - block:
-  - name: req-008.3 check if cron & at allow files exist
+  - name: req-008.2 check if cron & at allow files exist
     stat:
       path: "{{ item }}"
     register: check_allow_files
@@ -264,7 +194,7 @@
     with_items:
       - "/etc/cron.allow"
       - "/etc/at.allow"
-  - name: req-008.4 check permissions of cron & at allow files
+  - name: req-008.3 check permissions of cron & at allow files
     file:
       path: "{{ item }}"
       owner: root
@@ -278,7 +208,7 @@
   rescue:
     - debug:
         msg: "Req-008 (2/2): FAILED"
-  when: config_cron and ansible_check_mode
+  when: config_cron
 
 # Req 9: Sticky bit must be set on all world-writable directories.
 
@@ -286,7 +216,7 @@
     - name: req-009.1 search for world-writable directories
       shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type d -perm -0002 \! -perm -1000 2>/dev/null
       register: check_directories
-      failed_when: ansible_check_mode and check_directories.stdout != ""
+      failed_when: check_directories.stdout != ""
       changed_when: false
       check_mode: no
   rescue:
@@ -294,34 +224,19 @@
         msg: "Req-009 (1/1): FAILED"
   when: config_worldwritable_directories
 
-- name: req-009.0 set sticky bit for world-writable directories
-  file:
-    path: "{{ item }}"
-    mode: o+t
-    state: directory
-  with_items: "{{ check_directories.stdout_lines | default([]) }}"
-  when: check_directories.stdout != "" and not ansible_check_mode
-
 # Req 10: No regular files that are world writable must exist.
 
 - block:
     - name: req-010.1 search for world-writable files
       shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f -perm -0002 2>/dev/null
       register: check_files
-      failed_when: ansible_check_mode and check_files.stdout != ""
+      failed_when: check_files.stdout != ""
       changed_when: false
       check_mode: no
   rescue:
     - debug:
         msg: "Req-010 (1/1): FAILED"
   when: config_worldwritable_files == true
-
-- name: req-010.2 change permissions of world-writable files
-  file:
-    path: "{{ item }}"
-    mode: o-w
-  with_items: "{{ check_files.stdout_lines | default([]) }}"
-  when: check_files.stdout != "" and not ansible_check_mode
 
 # Req 11:	Passwords must be protected with an appropriate hashing function.
 
@@ -333,28 +248,28 @@
         regexp: '^ENCRYPT_METHOD*'
         line: 'ENCRYPT_METHOD SHA512'
       register: check_pass_encrypt
-      failed_when: check_pass_encrypt.changed and ansible_check_mode
+      failed_when: check_pass_encrypt.changed
   rescue:
     - debug:
         msg: "Req-011 (1/3): FAILED"
   when: config_sha512
 
 - block:
-    - name: req-010.2 set max rounds for sha-512
+    - name: req-011.2 set max rounds for sha-512
       lineinfile:
         dest: '/etc/login.defs'
         state: present
         regexp: '^SHA_CRYPT_MAX_ROUNDS*'
         line: 'SHA_CRYPT_MAX_ROUNDS {{ sha512_rounds_max }}'
       register: check_rounds_max
-      failed_when: check_rounds_max.changed and ansible_check_mode
+      failed_when: check_rounds_max.changed
   rescue:
     - debug:
         msg: "Req-011 (2/3): FAILED"
   when: config_sha512
 
 - block:
-    - name: req-010.3 set min rounds for sha-512
+    - name: req-011.3 set min rounds for sha-512
       lineinfile:
         dest: '/etc/login.defs'
         state: present
@@ -362,7 +277,7 @@
         insertafter: '^ENCRYPT_METHOD SHA512'
         line: 'SHA_CRYPT_MIN_ROUNDS {{ sha512_rounds_min }}'
       register: check_rounds_min
-      failed_when: check_rounds_min.changed and ansible_check_mode
+      failed_when: check_rounds_min.changed
   rescue:
     - debug:
         msg: "Req-011 (3/3): FAILED"
@@ -371,14 +286,14 @@
 # Req 12: The default user umask must be 027 or more restrictive.
 
 - block:
-    - name: req-011.1 check default umask for users
+    - name: req-012.1 check default umask for users
       lineinfile:
         dest: '/etc/login.defs'
         line: 'UMASK {{ umask }}'
         regexp: '^UMASK'
         state: present
       register: check_umask
-      failed_when: check_umask.changed and ansible_check_mode
+      failed_when: check_umask.changed
   rescue:
     - debug:
         msg: "Req-012 (1/1): FAILED"
@@ -394,7 +309,7 @@
         state: 'file'
         follow: 'yes'
       register: check_sbit
-      failed_when: check_sbit.changed and ansible_check_mode
+      failed_when: check_sbit.changed
       with_items:
         - "{{ suid_sgid_blacklist }}"
   rescue:
@@ -418,7 +333,7 @@
         state: 'file'
         follow: 'yes'
       register: check_sbit_unknown
-      failed_when: check_sbit_unknown.changed and ansible_check_mode
+      failed_when: check_sbit_unknown.changed
       with_items:
         - "{{ suid }}"
   rescue:
@@ -437,7 +352,7 @@
         group: root
         mode: 0755
       register: check_limitsd
-      failed_when: check_limitsd.changed and ansible_check_mode
+      failed_when: check_limitsd.changed
   rescue:
     - debug:
         msg: "Req-014 (1/): FAILED"
@@ -450,7 +365,7 @@
     owner: root
     group: root
     mode: 0440
-  when: config_coredumps and not ansible_check_mode
+  when: config_coredumps
 
 - block:
     - name: req-014.3 check restriction of coredumps
@@ -465,7 +380,7 @@
   rescue:
     - debug:
         msg: "Req-014 (2/3): FAILED"
-  when: ansible_check_mode and not check_limitsd.changed
+  when: not check_limitsd.changed
 
 - block:
     - name: reg-014.4 check sysctl-settings for coredumps
@@ -476,7 +391,7 @@
         state: present
         reload: yes
       register: check_sysctl
-      failed_when: check_sysctl.changed and ansible_check_mode
+      failed_when: check_sysctl.changed
       with_dict: '{{ coredumps }}'
   rescue:
     - debug:
@@ -506,7 +421,7 @@
         state: present
         reload: yes
       register: check_sysctl
-      failed_when: check_sysctl.changed and ansible_check_mode
+      failed_when: check_sysctl.changed
       with_dict: '{{ buffer_overflow_protection }}'
   rescue:
     - debug:
@@ -521,7 +436,7 @@
         name: 'prelink'
         state: absent
       register: check_prelink
-      failed_when: check_prelink.changed and ansible_check_mode
+      failed_when: check_prelink.changed
   rescue:
     - debug:
         msg: "Req-016 (1/1): FAILED"
@@ -538,7 +453,7 @@
         state: present
         reload: yes
       register: check_ipv4
-      failed_when: check_ipv4.changed and ansible_check_mode
+      failed_when: check_ipv4.changed
       with_dict: '{{ network_config_ipv4 }}'
   rescue:
     - debug:
@@ -556,7 +471,7 @@
         state: present
         reload: yes
       register: check_ipv6
-      failed_when: check_ipv6.changed and ansible_check_mode
+      failed_when: check_ipv6.changed
       with_dict: '{{ network_config_ipv6_disabled }}'
   rescue:
     - debug:
@@ -572,7 +487,7 @@
         state: present
         reload: yes
       register: check_ipv6
-      failed_when: check_ipv6.changed and ansible_check_mode
+      failed_when: check_ipv6.changed
       with_dict: '{{ network_config_ipv6_enabled }}'
   rescue:
     - debug:
@@ -583,10 +498,7 @@
 # Req 19:	Emerged vulnerabilities in software and hardware of a system must be
 # fixed or protected against misuse.
 
-# System update must be done before security configuration. For this tasks
-# to update system is placed at the beginning in /tasks/main.yml.
-
-- name: req-019.3 update repository cache (ubuntu)
+- name: req-019.1 update repository cache (ubuntu)
   apt:
     upgrade: no
     update_cache: yes
@@ -595,10 +507,10 @@
   register: cache_update
   ignore_errors: yes
   changed_when: false
-  when: ansible_os_family == "Debian" and ansible_check_mode
+  when: ansible_os_family == "Debian"
 
 - block:
-    - name: req-019.4 check if not installed updates available
+    - name: req-019.2 check if not installed updates available
       shell: apt-get upgrade -s | awk '/upgraded,/ {print $1}'
       args:
         warn: false
@@ -609,11 +521,10 @@
   rescue:
     - debug:
         msg: "Req-019 (1/1): FAILED"
-  when: ansible_os_family == "Debian" and
-      ( cache_update.changed and ansible_check_mode )
+  when: ansible_os_family == "Debian" and cache_update.changed
 
 - block:
-    - name: req-019.5 check if not installed updates available
+    - name: req-019.3 check if not installed updates available
       shell: yum check-update 2>/dev/null | grep -i "updates$" | wc -l
       args:
         warn: false
@@ -624,19 +535,10 @@
   rescue:
     - debug:
         msg: "Req-019 (1/1): FAILED"
-  when: ansible_os_family == "RedHat" and ansible_check_mode
+  when: ansible_os_family == "RedHat"
 
 # Req 20: GPG check for repository server must be activated and corresponding
 # keys for trustable repositories must be configured.
-
-- block:
-    - name: req-020.0 generate dummy failure message
-      fail:
-        msg: "Req 20 can not be checked automatically. Please do manual check!"
-  rescue:
-    - debug:
-        msg: "Req-020 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 21:	User accounts must be used that allow unambiguous identification of
 # the user.
@@ -670,7 +572,6 @@
   rescue:
      - debug:
         msg: "Req-021 (1/1): FAILED"
-  when: ansible_check_mode
 
 # Req 22:	System accounts must be non-login.
 
@@ -678,7 +579,7 @@
     - name: req-022.1 check for system accounts with login
       shell: awk -F':' '($1!="root" && $1!="sync" && $1!="shutdown" && $1!="halt" && $3<{{ uid_max }} && $7=="/bin/bash") {print $1}' /etc/passwd
       register: check_sys_user
-      failed_when: check_sys_user.stdout != "" and ansible_check_mode
+      failed_when: check_sys_user.stdout != ""
       changed_when: false
       check_mode: no
   rescue:
@@ -686,20 +587,14 @@
         msg: "Req-022 (1/1): FAILED"
   when: config_nologin_sys_accounts
 
-- name: req-022.2 disable login for system accounts
-  shell: /usr/sbin/usermod -s {{ nologin_path }} {{ item }}
-  with_items: "{{check_sys_user.stdout_lines}}"
-  when: config_nologin_sys_accounts and
-      ( check_sys_user.stdout != "" and not ansible_check_mode )
-
 # Req 23:	User accounts must be protected against unauthorized usage by at least
 # one authentication attribute.
 
 - block:
-    - name: req-022.0 check for user accounts without password
+    - name: req-023.1 check for user accounts without password
       shell: awk -F":" '($2 == "" && $2 != "!" && $2 !="*") {print $1}' /etc/shadow
       register: user_without_pw
-      failed_when: user_without_pw.stdout != "" and ansible_check_mode
+      failed_when: user_without_pw.stdout != ""
       changed_when: false
       check_mode: no
   rescue:
@@ -707,17 +602,11 @@
         msg: "Req-023 (1/1): FAILED"
   when: config_user_without_pw
 
-- name: req-022.2 lock accounts without password
-  shell: passwd -l "{{ item }}"
-  with_items: "{{ user_without_pw.stdout_lines }}"
-  when: config_user_without_pw and
-      ( user_without_pw.stdout != "" and not ansible_check_mode )
-
 # Req 24:	User accounts with extensive rights must be protected with two
 # authentication attributes.
 
 - block:
-    - name: req-024.0 generate dummy failure message
+    - name: req-024.1 generate dummy failure message
       fail:
         msg: "Req 24 can not be checked automatically. Please do manual check!"
   rescue:
@@ -728,7 +617,7 @@
 # Req 25:	The system must be connected to a central system for user administration.
 
 - block:
-    - name: req-025.0 generate dummy failure message
+    - name: req-025.1 generate dummy failure message
       fail:
         msg: "Req 25 can not be checked automatically. Please do manual check!"
   rescue:
@@ -742,7 +631,7 @@
     - name: req-26.1 check if root has a password set
       shell: grep "^root:[*\!]:" /etc/shadow
       register: check_root_pw
-      failed_when: check_root_pw.stdout != "" and ansible_check_mode
+      failed_when: check_root_pw.stdout != ""
       changed_when: false
       check_mode: no
   rescue:
@@ -751,34 +640,15 @@
   when: ansible_distribution == "Ubuntu" and
       ( config_single_user_mode and config_root_password )
 
-- name: req-026.2 generate a secret root password
-  shell: date +%s | sha256sum | base64 | head -c 15 ; echo
-  register: root_password
-  changed_when: false
-  when:
-    - ansible_distribution == "Ubuntu"
-    - config_root_password
-    - check_root_pw.stdout != ""
-    - not ansible_check_mode
-
-- name: req-026.3 set root password
-  shell: printf "{{ root_password }}\n{{ root_password }}" | passwd root
-  changed_when: false
-  when:
-    - ansible_distribution == "Ubuntu"
-    - config_root_password
-    - check_root_pw.stdout != ""
-    - not ansible_check_mode
-
 - block:
-    - name: req-026.4 set single user mode
+    - name: req-026.2 set single user mode
       lineinfile:
         dest: '{{ item }}'
         state: present
         regexp: '^ExecStart=*'
         line: 'ExecStart=-/bin/sh -c "/usr/sbin/sulogin; /usr/bin/systemctl --fail --no-block default"'
       register: check_sum
-      failed_when: check_sum.changed and ansible_check_mode
+      failed_when: check_sum.changed
       with_items:
         - "/usr/lib/systemd/system/rescue.service"
         - "/usr/lib/systemd/system/emergency.service"
@@ -803,10 +673,9 @@
   rescue:
     - debug:
         msg: "Req-027 (1/2): FAILED"
-  when: ansible_check_mode
 
 - block:
-    - name: req-027.3 check if management interface (ipv6) is enabled
+    - name: req-027.2 check if management interface (ipv6) is enabled
       fail:
         msg: "Management interface for IPv6 is disabled."
       when: config_mgmt_interface_ipv6 == false
@@ -818,7 +687,7 @@
   rescue:
     - debug:
         msg: "Req-027 (2/2): FAILED"
-  when: config_ipv6_enable and ansible_check_mode
+  when: config_ipv6_enable
 
 # Req 28:	Management services must be bound to the management network.
 
@@ -835,7 +704,7 @@
   rescue:
     - debug:
         msg: "Req-027 (1/2): FAILED"
-  when: ansible_check_mode and config_mgmt_interface_ipv4
+  when: config_mgmt_interface_ipv4
 
 - block:
     - name: req-028.2 check if sshd is bind on ipv6 of mgmt interface
@@ -850,12 +719,11 @@
   rescue:
     - debug:
         msg: "Req-028 (2/2): FAILED"
-  when: ansible_check_mode and
-      ( config_ipv6_enable and config_mgmt_interface_ipv6)
+  when: config_ipv6_enable and config_mgmt_interface_ipv6
 
 #<tbd>
 #- block:
-#    - name: req-027.3 check if ntp is bind on ipv4 of mgmt interface
+#    - name: req-028.3 check if ntp is bind on ipv4 of mgmt interface
 #      lineinfile:
 #        path: '/etc/ntp.conf'
 #        line: "server {{ item }}"
@@ -871,7 +739,7 @@
 # New Var: ntp_server_enable
 
 #- block:
-#    - name: req-056.4 check if ntp is bind on ipv6 of mgmt interface
+#    - name: req-028.4 check if ntp is bind on ipv6 of mgmt interface
 #      lineinfile:
 #        path: '/etc/ntp.conf'
 #        line: "server {{ item }}"
@@ -890,10 +758,9 @@
 # the operating system.
 
 - block:
-    - name: req-029.0 generate dummy failure message
+    - name: req-029.1 generate dummy failure message
       fail:
         msg: "Req 29 can not be checked automatically. Please do manual check!"
   rescue:
     - debug:
         msg: "Req-029 (1/1): FAILED"
-  when: ansible_check_mode

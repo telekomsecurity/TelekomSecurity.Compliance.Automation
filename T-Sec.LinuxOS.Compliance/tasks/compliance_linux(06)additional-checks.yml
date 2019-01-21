@@ -1,0 +1,323 @@
+---
+# ------------------------------------------------------------------------
+# Telekom Security - Compliance Automation - Compliance Checks
+# Linux OS for Servers (3.65)
+# Tasks: 06 Compliance Checks
+# ------------------------------------------------------------------------
+
+# Req 61:	No legacy + entries must exist in files passwd, shadows and group.
+
+- block:
+    - name: req-028.1 check passwd file for legacy entry
+      shell: awk -F":" '($1 == "+") {print $1}' /etc/passwd
+      register: search_leg_passwd
+      failed_when: search_leg_passwd.stdout == "+"
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "WARNING: Found legacy entry in passwd file."
+
+- block:
+    - name: req-028.2 check shadow file for legacy entry
+      shell: awk -F":" '($1 == "+") {print $1}' /etc/shadow
+      register: search_leg_shadow
+      failed_when: search_leg_shadow.stdout == "+"
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "WARNING: Found legacy entry in shadow file."
+
+- block:
+    - name: req-028.3 check group file for legacy entry
+      shell: awk -F":" '($1 == "+") {print $1}' /etc/group
+      register: search_leg_group
+      failed_when: search_leg_group.stdout == "+"
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "WARNING: Found legacy entry in passwd, shadow or group."
+
+# Req 62	A user's home directory must be owned by the user and have mode 750
+# or more restrictive.
+
+- name: check users for home directories
+  command: ls /home/
+  register: user_dirs
+  changed_when: false
+  check_mode: no
+
+- block:
+    - name: req-030.0 change user and permissions of home directories
+      file:
+        path: "/home/{{ item }}"
+        mode: 0750
+        state: directory
+        owner: "{{ item }}"
+        group: "{{ item }}"
+      register: check_home
+      failed_when: (check_home is changed)
+      with_items: "{{ user_dirs.stdout_lines | default([]) }}"
+  rescue:
+    - debug:
+        msg: "WARNING: User home directories with wrong permissions exists!"
+
+# Req 63:	Default group for the root account must be GID 0.
+
+- block:
+    - name: req-031.0 check if gid is 0 for root
+      shell: awk -F':' '{if ($1 == "root") print $4}' /etc/passwd
+      register: check_root_gid
+      failed_when: check_root_gid.stdout != "0"
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "WARNING: GID of root is not 0!"
+
+# Req 64:	Root must be the only UID 0 account.
+
+- block:
+    - name: req-032.0 check for users with uid 0 other than root
+      shell: awk -F':' '{ if ( $1 != "root" && $3 == 0 ) print $1 }' /etc/passwd
+      register: search_uid_zero
+      failed_when: search_uid_zero.stdout != ""
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "WARNING: Found more than one user with uid 0: {{ search_uid_zero.stdout_lines }}!"
+
+# Req 65:	All groups in /etc/passwd must exist in /etc/group.
+
+- name: read users from /etc/passwd
+  shell: awk -F':' '{if ($1 != "sync" && $1 != "shutdown" && $1 != "halt" && $7 != "{{ use_nologin_path }}" && $7 != "/bin/false") print $1}' /etc/passwd
+  register: read_users
+  changed_when: false
+  check_mode: no
+
+- block:
+    - name: req-033.0 check if group exist for users
+      shell: awk -F':' '{if ($1 == "{{ item }}" ) print $1}' /etc/group
+      register: check_groups
+      failed_when: check_groups.stdout == ""
+      changed_when: false
+      check_mode: no
+      with_items: "{{ read_users.stdout_lines }}"
+  rescue:
+    - debug:
+        msg: "WARNING: Not all groups exists in /etc/group file!"
+
+# Req 66:	No duplicate UIDs and GIDs must exist.
+
+- name: read uids from /etc/passwd
+  shell: awk -F':' '{print $3}' /etc/passwd
+  register: read_uid
+  changed_when: false
+  check_mode: no
+
+- block:
+    - name: req-034.1 check if duplicated uid exist
+      shell: awk -F':' '{ if ($3 == {{ item }}) print $3}' /etc/passwd | wc -l
+      register: check_uids
+      failed_when: check_uids.stdout >= "2"
+      changed_when: false
+      check_mode: no
+      with_items: "{{ read_uid.stdout_lines }}"
+  rescue:
+    - debug:
+        msg: "WARNING: Duplicated uid exists in /etc/passwd file!"
+
+- name: read gids from /etc/group
+  command: awk -F':' '{print $3}' /etc/group
+  register: read_gid
+  changed_when: false
+  check_mode: no
+
+- block:
+    - name: req-034.2 check if duplicated gid exist
+      shell: awk -F':' '{ if ($3 == {{ item }}) print $3}' /etc/group | wc -l
+      register: check_gids
+      failed_when: check_gids.stdout >= "2"
+      changed_when: false
+      check_mode: no
+      with_items: "{{ read_gid.stdout_lines }}"
+  rescue:
+    - debug:
+        msg: "WARNING: Duplicated gid exists in /etc/group file!"
+
+# Req 67:	No duplicate user and group names must exist.
+
+- name: read users from /etc/passwd
+  shell: awk -F':' '{print $1}' /etc/passwd
+  register: read_users2
+  changed_when: false
+  check_mode: no
+
+- block:
+    - name: req-035.1 check if duplicated users exist
+      shell: awk -F':' '{ if ($1 == "{{ item }}") print $1}' /etc/passwd | wc -l
+      register: check_users2
+      failed_when: check_users2.stdout >= "2"
+      changed_when: false
+      check_mode: no
+      with_items: "{{ read_users2.stdout_lines }}"
+  rescue:
+    - debug:
+        msg: "WARNING: Duplicated users exists in /etc/passwd file!"
+
+- name: read groups from /etc/group
+  shell: awk -F':' '{print $1}' /etc/group
+  register: read_groups2
+  changed_when: false
+  check_mode: no
+
+- block:
+    - name: req-035.2 check if duplicated groups exist
+      shell: awk -F':' '{ if ($1 == "{{ item }}") print $1}' /etc/group | wc -l
+      register: check_groups2
+      failed_when: check_groups2.stdout >= "2"
+      changed_when: false
+      check_mode: no
+      with_items: "{{ read_groups2.stdout_lines }}"
+  rescue:
+    - debug:
+        msg: "WARNING: Duplicated groups exists in /etc/group file!"
+
+# Req 68: The shadow group must be empty (only Ubuntu Linux).
+
+- block:
+    - name: req-036.1 check if shadow is epmty
+      shell: awk -F':' '{if ($1 == "shadow") print $4}' /etc/group
+      register: check_shadow
+      failed_when: check_shadow.stdout != ""
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "WARNING: Group shadow is not empty!"
+
+- name: read gid from shadow group
+  shell: awk -F':' '{if ($1 == "shadow") print $3}' /etc/group
+  register: read_gid_shadow
+  changed_when: false
+  check_mode: no
+
+- block:
+    - name: req-036.2 check if user is member of shadow
+      shell: awk -F':' '{ if ($4 == "{{ read_gid_shadow.stdout }}") print $4}' /etc/passwd | wc -l
+      register: check_gid_shadow
+      failed_when: check_gid_shadow.stdout != "0"
+      changed_when: false
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "WARNING: User has shadow as primary group assigned!"
+
+# Req 69: No files and directories without assigned user or group must exist.
+
+- block:
+    - name: req-040.1 search for unowned files
+      shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -nouser | wc -l
+      register: find_unowned
+      changed_when: false
+      failed_when: find_unowned.stdout != "0"
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "WARNING: Found file or directiry without asigned user!"
+
+- block:
+    - name: req-040.2 search for files without group
+      shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -nogroup | wc -l
+      register: find_no_group
+      changed_when: false
+      failed_when: find_no_group.stdout != "0"
+      check_mode: no
+  rescue:
+    - debug:
+        msg: "WARNING: Found file or directiry without asigned group!"
+
+# Req 70:	Permissions of security relevant configuration files must have the
+# distribution default values or more restrictive.
+
+- block:
+    - name: req-042.1 check permissions of all passwd, group & shadow files
+      file:
+        path: "{{ item.path }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      with_items:
+        - { path: "{{ passwd_file }}", owner: "{{ passwd_owner }}", group: "{{ passwd_group }}", mode: "{{ passwd_mode }}" }
+        - { path: "{{ passwdm_file }}", owner: "{{ passwdm_owner }}", group: "{{ passwdm_group }}", mode: "{{ passwdm_mode }}" }
+        - { path: "{{ shadow_file }}", owner: "{{ shadow_owner }}", group: "{{ shadow_group }}", mode: "{{ shadow_mode }}" }
+        - { path: "{{ shadowm_file }}", owner: "{{ shadowm_owner }}", group: "{{ shadowm_group }}", mode: "{{ shadowm_mode }}" }
+        - { path: "{{ gshadow_file }}", owner: "{{ gshadow_owner }}", group: "{{ gshadow_group }}", mode: "{{ gshadow_mode }}" }
+        - { path: "{{ gshadowm_file }}", owner: "{{ gshadowm_owner }}", group: "{{ gshadowm_group }}", mode: "{{ gshadowm_mode }}" }
+        - { path: "{{ group_file }}", owner: "{{ group_owner }}", group: "{{ group_group }}", mode: "{{ group_mode }}" }
+        - { path: "{{ groupm_file }}", owner: "{{ groupm_owner }}", group: "{{ groupm_group }}", mode: "{{ groupm_mode }}" }
+      register: check_passwd_group_permissions
+      failed_when: (check_passwd_group_permissions is changed)
+  rescue:
+    - debug:
+        msg: "WARNING: Permissions of passwd/group/shadow file are incorrect!"
+
+- block:
+    - name: req-042.2 check permissions of bootloader config
+      file:
+        path: '{{ grub_file }}'
+        owner: "{{ grub_owner }}"
+        group: "{{ grub_group }}"
+        mode: "{{ grub_mode }}"
+      register: check_grub_permissions
+      failed_when: (check_grub_permissions is changed)
+  rescue:
+    - debug:
+        msg: "WARNING: Permissions of grub.cfg are incorrect!"
+
+- name: check for logfiles
+  shell: find /var/log -type f | grep -v "(history.log)"
+  register: check_logfiles
+  changed_when: false
+  check_mode: no
+
+- block:
+    - name: req-042.3 check permissions of logfiles
+      file:
+        path: '{{ item }}'
+        mode: '{{ logfile_mode }}'
+      register: check_logfiles_permissions
+      failed_when: (check_logfiles_permissions is changed)
+      with_items: "{{ check_logfiles.stdout_lines }}"
+  rescue:
+    - debug:
+        msg: "WARNING: Permissions of logfiles are incorrect!"
+
+- block:
+    - name: req-042.4 check permissions for sysctl.conf
+      file:
+        path: '{{ sysctl_file }}'
+        owner: "{{ sysctl_owner }}"
+        group: "{{ sysctl_group }}"
+        mode: "{{ sysctl_mode }}"
+      register: check_sysctl_permissions
+      failed_when: (check_sysctl_permissions is changed)
+  rescue:
+    - debug:
+        msg: "WARNING: Permissions of sysctl.conf file is incorrect!"
+
+- block:
+    - name: req-042.5 check permissions of sshd_config config
+      file:
+        path: "{{ sshd_conf_file }}"
+        owner: "{{ sshd_conf_owner }}"
+        group: "{{ sshd_conf_group }}"
+        mode: "{{ sshd_conf_mode }}"
+      register: check_ssh_permissions
+      failed_when: (check_ssh_permissions is changed)
+  rescue:
+    - debug:
+        msg: "WARNING: Permissions of sshd_config are incorrect!"

@@ -49,33 +49,52 @@
   when: ansible_os_family == "RedHat" and
       ( do_system_upgrade and not ansible_check_mode)
 
-#- import_tasks: test.yml
-
 # 01 basic hardening
-# - include_vars: linux(01)basic-hardening.yml
-# - import_tasks: linux(01)basic-hardening.yml
+#- include_vars: linux(01)basic-hardening.yml
+
+#- import_tasks: linux(01)basic-hardening.yml
+#  when: not ansible_check_mode
 
 # 02 logging
-- include_vars: linux(02)logging.yml
-- import_tasks: linux(02)logging.yml
+#- include_vars: linux(02)logging.yml
+
+#- import_tasks: hardening_linux(02)logging.yml
+#  when: not ansible_check_mode
+
+#- import_tasks: compliance_linux(02)logging.yml
+#  when: ansible_check_mode
+
 #- import_tasks: test.yml
 
-#- name: 03 logging
-#  include_vars: inux(03)pam.yml
-#  import_tasks: linux(03)pam.yml
-#  tags: pam
+# 03 logging pam
+#- include_vars: inux(03)pam.yml
 
-#- name: 04 iptables
-#  include_vars: linux(04)iptables.yml
-#  import_tasks: linux(04)iptables.yml
-#  tags: iptables
+#- import_tasks: hardening_linux(03)pam.yml
+#  when: not ansible_check_mode
 
-#- name: 05 mac
-#  include_vars: linux(05)mac.yml
-#  import_tasks: linux(05)mac.yml
-#  tags: mac
+#- import_tasks: compliance_linux(03)pam.yml
+#  when: ansible_check_mode
 
-#- name: 06 compliance checks
-#  include_vars: linux(06)compliance_checks.yml
-#  import_tasks: linux(06)compliance_checks.yml
-#  tags: compliance_checks
+# 04 iptables
+#- include_vars: linux(04)iptables.yml
+
+#- import_tasks: hardening_linux(04)iptables.yml
+#  when: not ansible_check_mode
+
+#- import_tasks: compliance_linux(04)iptables.yml
+#  when: ansible_check_mode
+
+# 05 mac
+#- include_vars: linux(05)mac.yml
+
+#- import_tasks: hardening_linux(05)mac.yml
+#  when: not ansible_check_mode
+
+#- import_tasks: compliance_linux(05)mac.yml
+#  when: ansible_check_mode
+
+# 06 compliance checks
+#- include_vars: linux(06)compliance_checks.yml
+
+#- import_tasks: compliance_linux(06)additional_checks.yml
+#  when: ansible_check_mode

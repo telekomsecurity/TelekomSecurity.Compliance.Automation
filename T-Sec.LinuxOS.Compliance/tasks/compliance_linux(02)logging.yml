@@ -1,9 +1,17 @@
 ---
 # ------------------------------------------------------------------------
-# Telekom Security - Compliance Automation
+# Telekom Security - Compliance Automation - Compliance Checks
 # Linux OS for Servers (3.65)
 # Tasks: 02 Logging
 # ------------------------------------------------------------------------
+
+# ========================================================================
+# Verification if playbook is started with '--check' option. If not throw
+# error and end play!
+- fail:
+    msg: "WARNING: Playbooks for compliance checks must be started with '--check' option!"
+  when: ansible_check_mode == false
+# ========================================================================
 
 # Req 30:	Logging must be enabled in bootloader configuration.
 
@@ -19,21 +27,12 @@
   rescue:
     - debug:
         msg: "Req-030 (1/1): FAILED"
-  when: config_grub_logging and ansible_check_mode
+  when: config_grub_logging
 
 # Req 31:	Log rotation for logfiles must be configured.
 
-- name: req-031.1 disable unused filesystems
-  template:
-    src: 'logrotate.j2'
-    dest: '/etc/logrotate.conf'
-    owner: root
-    group: root
-    mode: 0644
-  when: config_log_rotate and not ansible_check_mode
-
 - block:
-    - name: req-031.2 check time for log rotate
+    - name: req-031.1 check time for log rotate
       lineinfile:
         path: '/etc/logrotate.conf'
         line: '{{ log_rotate_time }}'
@@ -43,10 +42,10 @@
   rescue:
     - debug:
         msg: "Req-031 (1/3): FAILED"
-  when: config_log_rotate and ansible_check_mode
+  when: config_log_rotate
 
 - block:
-    - name: req-031.3 check count for log rotate
+    - name: req-031.2 check count for log rotate
       lineinfile:
         path: '/etc/logrotate.conf'
         regexp: '^rotate'
@@ -57,10 +56,10 @@
   rescue:
     - debug:
         msg: "Req-031 (2/3): FAILED"
-  when: config_log_rotate and ansible_check_mode
+  when: config_log_rotate
 
 - block:
-    - name: req-031.4 check max size for log rotate
+    - name: req-031.3 check max size for log rotate
       shell: grep -i "maxsize {{ log_rotate_maxsize }}" /etc/logrotate.conf | wc -l
       register: check_rotate_maxsize
       failed_when: check_rotate_maxsize.stdout == "0"
@@ -69,7 +68,7 @@
   rescue:
     - debug:
         msg: "Req-031 (3/3): FAILED"
-  when: config_log_rotate and ansible_check_mode
+  when: config_log_rotate
 
 # Req 32:	System time must be synchronized against a reference time source.
 
@@ -79,21 +78,15 @@
         name: "{{ ntp_software }}"
         state: present
       register: check_ntp
-      failed_when: check_ntp.changed and ansible_check_mode
+      failed_when: check_ntp.changed
       notify: restart ntp
   rescue:
     - debug:
         msg: "Req-032 (1/5): FAILED"
   when: config_ntp
 
-- name: req-032.2 set time zone
-  command: timedatectl set-timezone {{ use_timezone }}
-  changed_when: false
-  when: config_ntp and
-       (set_timezone and not ansible_check_mode)
-
 - block:
-    - name: req-032.3 check time zone
+    - name: req-032.2 check time zone
       shell: timedatectl status | grep -i "{{ use_timezone }}" | wc -l
       register: check_timezone
       failed_when: check_timezone.stdout == "0"
@@ -102,24 +95,23 @@
   rescue:
     - debug:
         msg: "Req-032 (2/5): FAILED"
-  when: config_ntp and
-       ( set_timezone and ansible_check_mode )
+  when: config_ntp and set_timezone
 
 - block:
-    - name: req-032.4 change init.d/ntp file
+    - name: req-032.3 change init.d/ntp file
       lineinfile:
         dest: '/etc/init.d/ntp'
         regexp: '^RUNASUSER=(.*)'
         line: 'RUNASUSER=ntp'
       register: check_ntp
-      failed_when: check_ntp.changed and ansible_check_mode
+      failed_when: check_ntp.changed
       notify: restart ntp
   rescue:
     - debug:
         msg: "Req-032 (2/3): FAILED"
   when: config_ntp and ansible_os_family == "Debian"
 
-- name: req-032.5 change ntp.conf
+- name: req-032.4 change ntp.conf
   template:
     src: '{{ ntp_config_file }}'
     dest: '/etc/{{ntp_software}}.conf'
@@ -127,10 +119,10 @@
     group: root
     mode: 0644
   notify: restart ntp
-  when: config_ntp and not ansible_check_mode
+  when: config_ntp
 
 - block:
-    - name: req-032.6 check ntp config file
+    - name: req-032.5 check ntp config file
       stat:
         path: '/etc/{{ntp_software}}.conf'
       register: ntp_status
@@ -138,10 +130,10 @@
   rescue:
     - debug:
         msg: "Req-032 (3/5): FAILED"
-  when: config_ntp and ansible_check_mode
+  when: config_ntp
 
 - block:
-    - name: req-032.7 check ntp configuration
+    - name: req-032.6 check ntp configuration
       lineinfile:
         path: '/etc/{{ntp_software}}.conf'
         line: "server {{ item }}"
@@ -152,17 +144,16 @@
   rescue:
     - debug:
         msg: "Req-032 (4/5): FAILED"
-  when: config_ntp and
-        ( ansible_check_mode and ntp_status.stat.exists )
+  when: config_ntp and and ntp_status.stat.exists
 
 - block:
-    - name: req-032.8 change chronyd file
+    - name: req-032.7 change chronyd file
       lineinfile:
         dest: '/etc/sysconfig/chronyd'
         regexp: '^OPTIONS=(.*)'
         line: 'OPTIONS="-u chrony"'
       register: check_chrony
-      failed_when: check_chrony.changed and ansible_check_mode
+      failed_when: check_chrony.changed
       notify: restart ntp
   rescue:
     - debug:
@@ -177,20 +168,11 @@
         name: '{{ audit_deamon }}'
         state: present
       register: check_auditd
-      failed_when: check_auditd.changed and ansible_check_mode
+      failed_when: check_auditd.changed
   rescue:
     - debug:
         msg: "Req-033 (1/4): FAILED"
   when: config_auditd
-
-- name: req-030 enable logging before auditd starts
-  lineinfile:
-    path: '/etc/default/grub'
-    regexp: ^GRUB_CMDLINE_LINUX=(.*)"
-    line: GRUB_CMDLINE_LINUX="audit=1"
-    state: present
-  notify: update grub
-  when: config_grub_logging and not ansible_check_mode
 
 - block:
     - name: req-033.2 check max size for log rotate in auditd.conf
@@ -200,8 +182,7 @@
         line: 'max_log_file = {{ auditd_file_size }}'
         state: present
       register: check_auditd_maxsize
-      failed_when: ansible_check_mode and
-                  ( check_auditd.changed or check_auditd_maxsize.changed)
+      failed_when: check_auditd.changed or check_auditd_maxsize.changed
   rescue:
     - debug:
         msg: "Req-033 (2/4): FAILED"
@@ -215,9 +196,7 @@
         line: 'num_logs = {{ auditd_num_logs }}'
         state: present
       register: check_auditd_num_logs
-      failed_when: ansible_check_mode and
-                  ( check_auditd.changed or check_auditd_num_logs.changed )
-      notify: restart auditd
+      failed_when: check_auditd.changed or check_auditd_num_logs.changed
   rescue:
     - debug:
         msg: "Req-033 (3/4): FAILED"
@@ -231,29 +210,13 @@
         line: 'max_log_file_action = {{ auditd_rotate_action }}'
         state: present
       register: check_auditd_rotate
-      failed_when: ansible_check_mode and
-                  ( check_auditd.changed or check_auditd_rotate.changed )
-      notify: restart auditd
+      failed_when: check_auditd.changed or check_auditd_rotate.changed
   rescue:
     - debug:
         msg: "Req-033 (4/4): FAILED"
   when: config_auditd and config_log_rotate
 
 # Req 34:	System events must be logged.
-# Req 35:	Access and Authentication events must be logged.
-# Req 36:	Account and Group Management events must be logged.
-# Req 37:	Configuration Change events must be logged.
-
-- name: req-034-37.1 configure logging events
-  template:
-    src: 'audit-rules.j2'
-    dest: "{{ audit_rules_file }}"
-    owner: root
-    group: root
-    mode: 0640
-    backup: yes
-  notify: restart auditd
-  when: config_auditd and not ansible_check_mode
 
 - block:
     - name: req-034.1 check logging of system events
@@ -269,8 +232,9 @@
   rescue:
     - debug:
         msg: "Req-034 (1/1): FAILED"
-  when: config_auditd and
-      ( config_system_events and ansible_check_mode )
+  when: config_auditd and config_system_events
+
+# Req 35:	Access and Authentication events must be logged.
 
 - block:
     - name: req-035.1 check logging of access and authentication events
@@ -286,8 +250,7 @@
   rescue:
     - debug:
         msg: "Req-035 (1/2): FAILED"
-  when: config_auditd and
-      ( config_access_events and ansible_check_mode )
+  when: config_auditd and config_access_events
 
 - name: req-035.2 search for privileged commands
   shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f \( -perm -4000 -o -perm -2000 \) -print 2>/dev/null
@@ -306,12 +269,13 @@
     with_items: '{{ priv_commands.stdout_lines }}'
     notify: restart auditd
     register: check_priv_log
-    failed_when: ansible_check_mode and
-                ( check_auditd.changed or check_priv_log.changed )
+    failed_when: check_auditd.changed or check_priv_log.changed
   rescue:
     - debug:
         msg: "Req-035 (2/2): FAILED"
   when: config_auditd and config_access_events
+
+# Req 36:	Account and Group Management events must be logged.
 
 - block:
     - name: req-036.1 check logging of account and group mgmt events
@@ -325,8 +289,9 @@
   rescue:
     - debug:
         msg: "Req-036 (1/1): FAILED"
-  when: config_auditd and
-      ( config_account_group_mgmt_events and ansible_check_mode )
+  when: config_auditd and config_account_group_mgmt_events
+
+# Req 37:	Configuration Change events must be logged.
 
 - block:
     - name: req-037.1 check logging of configuration change events
@@ -342,8 +307,7 @@
   rescue:
     - debug:
         msg: "Req-037 (1/1): FAILED"
-  when: config_auditd and
-      ( config_change_events and ansible_check_mode )
+  when: config_auditd and config_change_events
 
 # Req 38:	Auditd configuration must be immutable.
 
@@ -355,13 +319,11 @@
         line: '-e 2'
         state: present
       register: check_log_immutable
-      failed_when: ansible_check_mode and
-                  ( check_auditd.changed or check_log_immutable.changed )
+      failed_when: check_auditd.changed or check_log_immutable.changed
   rescue:
     - debug:
         msg: "Req-038 (1/1): FAILED"
-  when: config_auditd and
-      ( check_auditd.changed and config_auditd_immutable )
+  when: config_auditd and config_auditd_immutable
 
 # Req 39:	Security relevant logging data must be send to an external system direct
 # after their creation.
@@ -372,7 +334,7 @@
         name: '{{ syslog_type }}'
         state: present
       register: check_syslog
-      failed_when: check_syslog.changed and ansible_check_mode
+      failed_when: check_syslog.changed
   rescue:
     - debug:
         msg: "Req-039 (1/1): FAILED"
@@ -388,10 +350,8 @@
         state: present
         regexp: '^\$FileCreateMode.*'
         line: '$FileCreateMode {{ rsyslog_permissions }}'
-      notify: restart rsyslog
       register: check_rsyslog_permissions
-      failed_when: ansible_check_mode and
-                  ( check_syslog.changed or check_rsyslog_permissions.changed )
+      failed_when: check_syslog.changed or check_rsyslog_permissions.changed
   rescue:
     - debug:
         msg: "Req-040 (1/1): FAILED"
@@ -401,15 +361,13 @@
 # configured.
 
 - block:
-  - name: req-041.1 configure logging server
-    lineinfile:
-      dest: '/etc/rsyslog.conf'
-      state: present
-      line: '*.* @{{ syslog_server }}:514'
-    notify: restart rsyslog
-    register: check_syslog_server
-    failed_when: ansible_check_mode and
-                ( check_syslog.changed or check_syslog_server.changed )
+    - name: req-041.1 configure logging server
+      lineinfile:
+        dest: '/etc/rsyslog.conf'
+        state: present
+        line: '*.* @{{ syslog_server }}:514'
+      register: check_syslog_server
+      failed_when: check_syslog.changed or check_syslog_server.changed
   rescue:
     - debug:
         msg: "Req-041 (1/1): FAILED"
@@ -419,24 +377,22 @@
 # for logfiles must be configured.
 
 - block:
-    - name: req-042.0 generate dummy failure message
+    - name: req-042.1 generate dummy failure message
       fail:
         msg: "Req 42 can not be checked automatically. Please do manual check!"
   rescue:
     - debug:
         msg: "Req-042 (1/1): FAILED"
-  when: ansible_check_mode and
-      ( config_syslog and syslog_type == "syslogng")
+  when: config_syslog and syslog_type == "syslogng"
 
 # Req 43:	If Syslog-NG is used, at least one central logging server must be
 # configured.
 
 - block:
-    - name: req-043.0 generate dummy failure message
+    - name: req-043.1 generate dummy failure message
       fail:
         msg: "Req 43 can not be checked automatically. Please do manual check!"
   rescue:
     - debug:
         msg: "Req-043 (1/1): FAILED"
-  when: ansible_check_mode and
-      ( config_syslog and syslog_type == "syslogng")
+  when: config_syslog and syslog_type == "syslogng"

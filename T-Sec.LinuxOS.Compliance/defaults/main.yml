@@ -50,15 +50,6 @@ config_ipv6_enable: false
 # Enable (true) if Ansible should do an update to current patch level.
 do_system_upgrade: false
 
-# Req 21:	User accounts must be used that allow unambiguous identification of
-# the user.
-
-# Set user name of account used to connect with Ansible.
-
-# <tbd>
-# Erlaubte User einbauen?
-user_name: ""
-
 # Req 27: The management of the operating system must be done via a dedicated
 # management network which is independent from the production network.
 
@@ -88,6 +79,6 @@ use_timezone: "Europe/Berlin"
 # Note: You can only use rsyslog in this version! syslogng will be
 # implemented in a later version!
 # ------------------------------------------------------------------------
-config_syslog: true
+config_syslog: false
 syslog_type: "rsyslog"
-syslog_server: "1.1.1.1"
+syslog_server: ""

@@ -12,3 +12,18 @@
     msg: Architecture "{{ ansible_architecture }}"
 
 # ---------------------------------------------------------------------
+
+
+- block:
+    - name: req-038.1 make audit configuration immutable
+      lineinfile:
+        path: "{{ audit_rules_file }}"
+        insertafter: EOF
+        line: '-e 2'
+        state: present
+      register: check_log_immutable
+      failed_when: ansible_check_mode and check_log_immutable.changed
+  rescue:
+    - debug:
+        msg: "Req-038 (1/1): FAILED"
+  when: config_auditd
