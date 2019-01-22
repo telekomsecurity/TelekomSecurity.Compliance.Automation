@@ -5,19 +5,56 @@
 # Tasks: 03 PAM
 # ------------------------------------------------------------------------
 
+# ========================================================================
+# Verification if playbook is started with '--check' option. If not throw
+# error and end play!
+- fail:
+    msg: "WARNING: Playbooks for compliance checks must be started with '--check' option!"
+  when: ansible_check_mode == false
+# ========================================================================
+
 # Req 44:	If PAM is used, an appropriate hashing function must be configured for
 # password protection for PAM.
+
+- block:
+    - name: req-044.1 configure password hashing for pam (Ubuntu)
+      pamd:
+        name: common-password
+        type: password
+        control: '[success=1 default=ignore]'
+        module_path: pam_unix.so
+        module_arguments:
+          - '{{ password_hashing }}'
+          - 'rounds={{ hashing_rounds }}'
+        state: args_present
+  rescue:
+    - debug:
+        msg: "Req-044 (1/1): FAILED"
+  when: config_pam_password_complexity and ansible_distribution == "Ubuntu"
+
+- block:
+    - name: req-044.1 configure password hashing for pam (RedHat)
+      pamd:
+        name: "{{ item }}"
+        type: password
+        control: sufficient
+        module_path: pam_unix.so
+        module_arguments:
+          - '{{ password_hashing }}'
+          - 'rounds={{ hashing_rounds }}'
+        state: args_present
+      with_items:
+        - "password-auth"
+        - "system-auth"
+  rescue:
+    - debug:
+        msg: "Req-044 (1/1): FAILED"
+  when: config_pam_password_complexity and ansible_os_family == "RedHat"
 
 # Req 45:	If PAM is used, password rules must be configured for PAM to force the
 # use of passwords with a minimum length of 8 characters and a combination of three
 # out of the following categories: upper cases, lower case, numbers and special
 # characters.
-
-- name: req-049.1 uninstall outdated 'libpam-cracklib'
-  package:
-    name: 'libpam-cracklib'
-    state: absent
-  when: config_password_rules == true and ansible_os_family == "Debian"
 
 - name: req-049.2 install 'libpam-pwquality'
   package:
@@ -33,13 +70,7 @@
     line: "password\trequisite\t\t\tpam_pwquality.so minlen={{ set_min_length }} minclass={{ set_min_class }} maxrepeat=3"
   when: config_password_rules == true and ansible_distribution == "ubuntu"
 
-- name: req-049.4 set password length and encryption to sha-512
-  lineinfile:
-    dest: '/etc/pam.d/common-password'
-    state: present
-    regexp: 'pam_unix.so'
-    line: "password\t[success=1 default=ignore]\tpam_unix.so obscure use_authtok try_first_pass sha512 minlen=8 remember=5"
-  when: config_password_rules == true and ansible_distribution == "ubuntu"
+
 
 # --- Compliance ---
 

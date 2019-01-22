@@ -42,7 +42,7 @@
   when: config_new_user and not ansible_check_mode
 
 # 01 ssh requirements
-- include_vars: ssh(01)ssh-requirements.yml
+- include_vars: vars_ssh(01)ssh-requirements.yml
 
 # hardening
 - import_tasks: hardening_ssh(01)ssh-requirements.yml

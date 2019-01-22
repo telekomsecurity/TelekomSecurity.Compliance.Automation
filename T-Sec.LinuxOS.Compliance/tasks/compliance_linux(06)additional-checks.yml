@@ -5,6 +5,14 @@
 # Tasks: 06 Compliance Checks
 # ------------------------------------------------------------------------
 
+# ========================================================================
+# Verification if playbook is started with '--check' option. If not throw
+# error and end play!
+- fail:
+    msg: "WARNING: Playbooks for compliance checks must be started with '--check' option!"
+  when: ansible_check_mode == false
+# ========================================================================
+
 # Req 61:	No legacy + entries must exist in files passwd, shadows and group.
 
 - block:

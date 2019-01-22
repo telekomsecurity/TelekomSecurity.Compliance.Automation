@@ -8,12 +8,43 @@
 # Req 44:	If PAM is used, an appropriate hashing function must be configured for
 # password protection for PAM.
 
+- name: req-044.1 configure password hashing for pam (Ubuntu)
+  pamd:
+    name: common-password
+    type: password
+    control: '[success=1 default=ignore]'
+    module_path: pam_unix.so
+    module_arguments:
+      - '{{ password_hashing }}'
+      - 'rounds={{ hashing_rounds }}'
+    state: args_present
+  when: config_pam_password_complexity and ansible_distribution == "Ubuntu"
+
+- name: req-044.2 configure password hashing for pam (RedHat)
+  pamd:
+    name: "{{ item }}"
+    type: password
+    control: sufficient
+    module_path: pam_unix.so
+    module_arguments:
+      - '{{ password_hashing }}'
+      - 'rounds={{ hashing_rounds }}'
+      - shadow
+      - nullok
+      - try_first_pass
+      - use_authtok
+    state: updated
+  with_items:
+    - "password-auth"
+    - "system-auth"
+  when: config_pam_password_complexity and ansible_os_family == "RedHat"
+
 # Req 45:	If PAM is used, password rules must be configured for PAM to force the
 # use of passwords with a minimum length of 8 characters and a combination of three
 # out of the following categories: upper cases, lower case, numbers and special
 # characters.
 
-- name: req-049.1 uninstall outdated 'libpam-cracklib'
+- name: req-045.1 uninstall outdated 'libpam-cracklib'
   package:
     name: 'libpam-cracklib'
     state: absent

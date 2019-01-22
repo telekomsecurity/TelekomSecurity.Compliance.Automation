@@ -5,6 +5,14 @@
 # Tasks: 05 MAC
 # ------------------------------------------------------------------------
 
+# ========================================================================
+# Verification if playbook is started with '--check' option. If not throw
+# error and end play!
+- fail:
+    msg: "WARNING: Playbooks for compliance checks must be started with '--check' option!"
+  when: ansible_check_mode == false
+# ========================================================================
+
 # Req 52:	If a system has Internet facing services or is a virtualization host,
 # a MAC solution must be used.
 

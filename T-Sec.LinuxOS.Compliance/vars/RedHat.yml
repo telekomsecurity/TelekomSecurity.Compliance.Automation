@@ -53,3 +53,8 @@ os_specific_change_events:
   # Network configuration change
   - "-w /etc/sysconfig/network -p wa -k system-locale "
   - "-w /etc/sysconfig/network-scripts/ -p wa -k system-locale "
+
+# Req 45:	If PAM is used, password rules must be configured for PAM to force the
+# use of passwords with a minimum length of 8 characters and a combination of three
+# out of the following categories: upper cases, lower case, numbers and special
+# characters.

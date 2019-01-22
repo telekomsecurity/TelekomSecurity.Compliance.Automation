@@ -5,6 +5,14 @@
 # Tasks: 04 IPTables
 # ------------------------------------------------------------------------
 
+# ========================================================================
+# Verification if playbook is started with '--check' option. If not throw
+# error and end play!
+- fail:
+    msg: "WARNING: Playbooks for compliance checks must be started with '--check' option!"
+  when: ansible_check_mode == false
+# ========================================================================
+
 # Req 48:	If iptables is used, policies for loopback traffic must be configured.
 
 - name: req-003.1 configure loopback traffic input rule
