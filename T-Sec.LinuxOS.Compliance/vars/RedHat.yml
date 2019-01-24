@@ -58,3 +58,7 @@ os_specific_change_events:
 # use of passwords with a minimum length of 8 characters and a combination of three
 # out of the following categories: upper cases, lower case, numbers and special
 # characters.
+os_pam_cracklib: 'pam_cracklib'
+os_pamd_config_files:
+  - "password-auth"
+  - "system-auth"

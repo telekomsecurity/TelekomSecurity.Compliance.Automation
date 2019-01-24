@@ -13,47 +13,26 @@
 
 # ---------------------------------------------------------------------
 
-- block:
-    - name: req-044.1 configure password hashing for pam (Ubuntu)
-      pamd:
-        name: common-password
-        type: password
-        control: '[success=1 default=ignore]'
-        module_path: pam_unix.so
-        module_arguments:
-          - '{{ password_hashing }}'
-          - 'rounds={{ hashing_rounds }}'
-        state: args_present
-  rescue:
-    - debug:
-        msg: "Req-044 (1/1): FAILED"
-  when: config_pam_password_complexity and ansible_distribution == "Ubuntu"
+- name: req-045.1 uninstall outdated pam-cracklib
+  package:
+    name: '{{ os_pam_cracklib }}'
+    state: absent
+  when: config_pam_password_rules
 
-- block:
-    - name: req-044.1 configure password hashing for pam (RedHat)
-      pamd:
-        name: "{{ item }}"
-        type: password
-        control: sufficient
-        module_path: pam_unix.so
-        module_arguments:
-          - '{{ password_hashing }}'
-          - 'rounds={{ hashing_rounds }}'
-        state: args_present
-      with_items:
-        - "password-auth"
-        - "system-auth"
-  rescue:
-    - debug:
-        msg: "Req-044 (1/1): FAILED"
-  when: config_pam_password_complexity and ansible_os_family == "RedHat"
+- name: req-045.2 install 'libpam-pwquality'
+  package:
+    name: 'libpam-pwquality'
+    state: present
+  when: config_pam_password_rules and ansible_distribution == "Ubuntu"
 
-#- name: req-049.4 set password length and encryption to sha-512
-#  lineinfile:
-#    dest: '/etc/pam.d/common-password'
-#    state: present
-#    regexp: 'pam_unix.so'
-#    line: "password\t[success=1 default=ignore]\tpam_unix.so obscure use_authtok try_first_pass sha512 minlen=8 remember=5"
-#  when: config_password_rules == true and ansible_distribution == "ubuntu"
-
-# $ echo "password     required      pam_unix.so sha512 rounds=640000" >> /etc/pam.d/passwd
+- name: req-045.3 configure password pwquality for pam
+  pamd:
+    name: "{{ item }}"
+    type: password
+    control: requisite
+    module_path: pam_pwquality.so
+    module_arguments:
+      - retry=3
+    state: args_present
+  with_items: "{{ os_pamd_config_files }}"
+  when: config_pam_password_rules

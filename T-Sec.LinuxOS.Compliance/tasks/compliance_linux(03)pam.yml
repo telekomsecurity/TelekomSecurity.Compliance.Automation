@@ -56,11 +56,11 @@
 # out of the following categories: upper cases, lower case, numbers and special
 # characters.
 
-- name: req-049.2 install 'libpam-pwquality'
+- name: req-045.2 install 'libpam-pwquality'
   package:
-    name: '{{ use_pam_pwquality }}'
+    name: 'libpam-pwquality'
     state: present
-  when: config_password_rules == true
+  when: config_password_rules and ansible_distribution == "Ubuntu"
 
 - name: req-049.3 set password complexity
   lineinfile:
