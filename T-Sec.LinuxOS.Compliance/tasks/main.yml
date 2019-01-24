@@ -68,9 +68,6 @@
 #- import_tasks: hardening_linux(02)logging.yml
 #  when: not ansible_check_mode
 
-#- import_tasks: compliance_linux(02)logging.yml
-#  when: ansible_check_mode
-
 # ------------------------------------------------------------------------
 # 03 logging pam
 # ------------------------------------------------------------------------
@@ -80,9 +77,6 @@
 #- import_tasks: hardening_linux(03)pam.yml
 #  when: not ansible_check_mode
 
-#- import_tasks: compliance_linux(03)pam.yml
-#  when: ansible_check_mode
-
 # ------------------------------------------------------------------------
 # 04 iptables
 # ------------------------------------------------------------------------
@@ -91,9 +85,6 @@
 #- import_tasks: hardening_linux(04)iptables.yml
 #  when: not ansible_check_mode
 
-#- import_tasks: compliance_linux(04)iptables.yml
-#  when: ansible_check_mode
-
 # ------------------------------------------------------------------------
 # 05 mac
 # ------------------------------------------------------------------------
@@ -101,14 +92,3 @@
 
 #- import_tasks: hardening_linux(05)mac.yml
 #  when: not ansible_check_mode
-
-#- import_tasks: compliance_linux(05)mac.yml
-#  when: ansible_check_mode
-
-# ------------------------------------------------------------------------
-# 06 compliance checks
-# ------------------------------------------------------------------------
-#- include_vars: vars_linux(06)compliance_checks.yml
-
-#- import_tasks: compliance_linux(06)additional_checks.yml
-#  when: ansible_check_mode

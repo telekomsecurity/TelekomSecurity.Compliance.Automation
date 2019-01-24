@@ -47,7 +47,3 @@
 # hardening
 - import_tasks: hardening_ssh(01)ssh-requirements.yml
   when: not ansible_check_mode
-
-# compliance checks
-- import_tasks: compliance_ssh(01)ssh-requirements.yml
-  when: ansible_check_mode
