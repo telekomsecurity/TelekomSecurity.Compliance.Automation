@@ -22,9 +22,20 @@ hashing_rounds: "640000"
 # out of the following categories: upper cases, lower case, numbers and special
 # characters.
 config_pam_password_rules: true
+password_minlen: 9  # Value plus 1 if credits are not disabled (default)
+password_digits: 1
+password_uppercase: 1
+password_lowercase: 1
+password_others: 1
+password_minclass: 3 # Number of required classes (digits, uppercase, lowercase, others)
+password_maxrepeat: 3 # Number of allowed consecutive same characters
 
 # Req 46:	If PAM is used, a protection against brute force and dictionary attacks
 # that hinder pass-word guessing must be configured in PAM.
+config_pam_account_locking: true
+failed_login_attemps: 3
+unlock_time: 30
 
 # Req 47:	If PAM is used , PAM must be configured that motd did not contain any
 # sensitive data.
+config_pam_motd: true   # Only Ubuntu

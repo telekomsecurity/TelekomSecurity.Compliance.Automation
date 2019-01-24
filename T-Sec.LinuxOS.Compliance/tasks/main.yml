@@ -39,56 +39,41 @@
     update_cache: yes
     cache_valid_time: 3600
     force_apt_get: no
-  when: ansible_os_family == "Debian" and
-      ( do_system_upgrade and not ansible_check_mode)
+  when: ansible_os_family == "Debian" and do_system_upgrade
 
 - name: req-019.2 upgrade linux os (redhat)
   yum:
     name: '*'
     state: latest
-  when: ansible_os_family == "RedHat" and
-      ( do_system_upgrade and not ansible_check_mode)
+  when: ansible_os_family == "RedHat" and do_system_upgrade
 
 # ------------------------------------------------------------------------
 # 01 basic hardening
 # ------------------------------------------------------------------------
 #- include_vars: vars_linux(01)basic-hardening.yml
-
 #- import_tasks: hardening_linux(01)basic-hardening.yml
-#  when: not ansible_check_mode
-
-#- import_tasks: compliance_linux(01)basic-hardening.yml
-#  when: ansible_check_mode
 
 # ------------------------------------------------------------------------
 # 02 logging
 # ------------------------------------------------------------------------
 #- include_vars: vars_linux(02)logging.yml
-
 #- import_tasks: hardening_linux(02)logging.yml
-#  when: not ansible_check_mode
 
 # ------------------------------------------------------------------------
 # 03 logging pam
 # ------------------------------------------------------------------------
 - include_vars: vars_linux(03)pam.yml
-- import_tasks: test.yml
-
-#- import_tasks: hardening_linux(03)pam.yml
-#  when: not ansible_check_mode
+- import_tasks: hardening_linux(03)pam.yml
 
 # ------------------------------------------------------------------------
 # 04 iptables
 # ------------------------------------------------------------------------
 #- include_vars: vars_linux(04)iptables.yml
-
 #- import_tasks: hardening_linux(04)iptables.yml
-#  when: not ansible_check_mode
+############- import_tasks: test.yml
 
 # ------------------------------------------------------------------------
 # 05 mac
 # ------------------------------------------------------------------------
 #- include_vars: vars_linux(05)mac.yml
-
 #- import_tasks: hardening_linux(05)mac.yml
-#  when: not ansible_check_mode
