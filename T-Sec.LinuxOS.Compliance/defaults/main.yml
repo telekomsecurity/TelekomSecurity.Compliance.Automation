@@ -13,13 +13,15 @@
 # Req 1: Unused services and protocols must be deactivated.
 
 # Needed TCP services that are used on system must be defined.
+config_iptables_rules_tcp: true
 tcp_services:
   - "22"
   # - ""
 
 # Needed UDP services that are used on system must be defined.
+config_iptables_rules_udp: false
 udp_services:
-  - ""
+  # - ""
   # - ""
 
 # Req 5:	Dedicated partitions must be used for growing content that can influence
@@ -31,7 +33,7 @@ udp_services:
 # ------------------------------------------------------------------------
 
 # Enable (true) if separate partitions are used.
-config_partitions: true
+config_partitions: false
 partitions:
   - "tmp"
   - "var"
@@ -48,7 +50,7 @@ config_ipv6_enable: false
 # fixed or protected against misuse.
 
 # Enable (true) if Ansible should do an update to current patch level.
-do_system_upgrade: false
+do_system_upgrade: true
 
 # Req 27: The management of the operating system must be done via a dedicated
 # management network which is independent from the production network.

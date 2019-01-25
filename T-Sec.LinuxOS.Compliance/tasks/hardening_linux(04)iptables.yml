@@ -7,31 +7,34 @@
 
 # Req 48:	If iptables is used, policies for loopback traffic must be configured.
 
-- name: req-003.1 configure loopback traffic input rule
+- name: req-048.1 configure loopback traffic input rule
   iptables:
     chain: INPUT
     in_interface: lo
     jump: ACCEPT
-  when: config_iptables == true and config_iptables_loopback == true
+  when: config_iptables_loopback and
+      ( config_iptables_rules_tcp or config_iptables_rules_udp )
 
-- name: req-003.2 configure loopback traffic output rule
+- name: req-048.2 configure loopback traffic output rule
   iptables:
     chain: OUTPUT
     out_interface: lo
     jump: ACCEPT
-  when: config_iptables == true and config_iptables_loopback == true
+  when: config_iptables_loopback and
+      ( config_iptables_rules_tcp or config_iptables_rules_udp )
 
-- name: req-003.3 configure loopback traffic drop rule
+- name: req-048.3 configure loopback traffic drop rule
   iptables:
     chain: INPUT
     source: 127.0.0.0/8
     jump: DROP
-  when: config_iptables == true and config_iptables_loopback == true
+  when: config_iptables_loopback and
+      ( config_iptables_rules_tcp or config_iptables_rules_udp )
 
 # Req 49:	If iptables is used, policies for outbound and established connections
 # must be configured.
 
-- name: req-004.1 configure outbound connections
+- name: req-049.1 configure outbound connections
   iptables:
     chain: OUTPUT
     protocol: '{{ item }}'
@@ -42,9 +45,10 @@
     - 'tcp'
     - 'udp'
     - 'icmp'
-  when: config_iptables == true and config_iptables_outbound == true
+  when: config_iptables_outbound and
+      ( config_iptables_rules_tcp or config_iptables_rules_udp )
 
-- name: req-004.2 configure inbound connections
+- name: req-049.2 configure inbound connections
   iptables:
     chain: INPUT
     protocol: '{{ item }}'
@@ -55,12 +59,13 @@
     - 'tcp'
     - 'udp'
     - 'icmp'
-  when: config_iptables == true and config_iptables_outbound == true
+  when: config_iptables_outbound and
+      ( config_iptables_rules_tcp or config_iptables_rules_udp )
 
 # Req 50:	If iptables is used, policies must exist for all ports in listening
 # state.
 
-- name: req-005.1 configure rules for ssh
+- name: req-050.1 configure rules for tcp
   iptables:
     chain: INPUT
     protocol: tcp
@@ -68,11 +73,10 @@
     match: state
     ctstate: NEW
     jump: ACCEPT
-  with_items: "{{ use_ssh_server_ports }}"
-  when: config_iptables == true and
-       ( config_ssh_server == true and config_iptables_rules == true )
+  with_items: "{{ tcp_services }}"
+  when: config_iptables_rules_tcp
 
-- name: req-005.2 configure rules for udp
+- name: req-050.2 configure rules for udp
   iptables:
     chain: INPUT
     protocol: udp
@@ -80,21 +84,19 @@
     match: state
     ctstate: NEW
     jump: ACCEPT
-  with_items: "{{ set_iptables_ports_udp }}"
-  when: config_iptables == true and
-       ( config_iptables_rules_udp == true and config_iptables_rules == true )
+  with_items: "{{ udp_services }}"
+  when: config_iptables_rules_udp
 
-- name: req-005.3 configure rules for tcp
+- name: req-050.3 configure rules for icmp (ping)
   iptables:
     chain: INPUT
-    protocol: tcp
-    destination_port: "{{ item }}"
+    protocol: icmp
+    icmp_type: 8
     match: state
-    ctstate: NEW
+    ctstate: NEW,ESTABLISHED,RELATED
     jump: ACCEPT
-  with_items: "{{ set_iptables_ports_tcp }}"
-  when: config_iptables == true and
-       ( config_iptables_rules_tcp == true and config_iptables_rules == true )
+  when: config_iptables_rules_icmp_ping and
+      ( config_iptables_rules_tcp or config_iptables_rules_udp )
 
 # Req 51:	If iptables is used, the default policy must be configured to drop all
 # traffic.
@@ -107,4 +109,5 @@
     - 'INPUT'
     - 'OUTPUT'
     - 'FORWARD'
-  when: config_iptables == true and config_iptables_default == true
+  when: config_iptables_default_policy and
+      ( config_iptables_rules_tcp or config_iptables_rules_udp )

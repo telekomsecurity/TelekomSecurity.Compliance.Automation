@@ -13,6 +13,7 @@
     regexp: ^GRUB_CMDLINE_LINUX=(.*)"
     line: GRUB_CMDLINE_LINUX="audit=1"
     state: present
+  notify: update grub
   when: config_grub_logging
 
 # Req 31:	Log rotation for logfiles must be configured.
@@ -67,18 +68,9 @@
 
 - name: req-033.1 check if auditd is installed
   package:
-    name: '{{ audit_deamon }}'
+    name: '{{ audit_software }}'
     state: present
   when: config_auditd
-
-- name: req-033.2 enable logging before auditd starts
-  lineinfile:
-    path: '/etc/default/grub'
-    regexp: ^GRUB_CMDLINE_LINUX=(.*)"
-    line: GRUB_CMDLINE_LINUX="audit=1"
-    state: present
-  notify: update grub
-  when: config_grub_logging
 
 - name: req-033.3 check max size for log rotate in auditd.conf
   lineinfile:
@@ -146,7 +138,7 @@
     insertafter: EOF
     line: '-e 2'
     state: present
-  when: config_auditd and and config_auditd_immutable
+  when: config_auditd and config_auditd_immutable
 
 # Req 39:	Security relevant logging data must be send to an external system direct
 # after their creation.

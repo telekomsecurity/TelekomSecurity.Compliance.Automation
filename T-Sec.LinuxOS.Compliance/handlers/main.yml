@@ -15,8 +15,9 @@
 
 - name: restart auditd
   service:
-    name: 'auditd'
+    name: '{{ audit_deamon }}'
     state: restarted
+  when: ansible_os_family != "RedHat"
 
 - name: restart ntp
   service:

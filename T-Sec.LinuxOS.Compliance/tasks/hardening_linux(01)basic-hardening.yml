@@ -21,13 +21,13 @@
   failed_when: "'Removing' not in rpcbind_result.stdout"
   when: disable_rpcbind and ansible_distribution_version == "14.04"
 
-- name: req-001.3 disable rpcbind (CentOS)
+- name: req-001.3 disable rpcbind (RedHat)
   systemd:
     name: rpcbind
     state: stopped
     enabled: no
   ignore_errors: yes
-  when: disable_rpcbind and ansible_distribution_version != "14.04"
+  when: disable_rpcbind and ansible_os_family == "RedHat"
 
 - name: req-001.4 stop rsync (14.04)
   service:
@@ -50,6 +50,18 @@
   when: disable_rsync and ansible_distribution_version != "14.04"
 
 # Req 2: The reachability of services must be restricted.
+
+- name: req-002.1 install iptables
+  package:
+    name: 'iptables'
+    state: present
+  when: config_iptables_rules_tcp or config_iptables_rules_udp
+
+- name: req-002.2 install tools to make iptables persistent
+  package:
+    name: '{{ iptables_tools }}'
+    state: present
+  when: config_iptables_rules_tcp or config_iptables_rules_udp
 
 # Req 3: Unused software must not be installed or must be uninstalled.
 
@@ -108,7 +120,7 @@
 
 # Req 8: The use of at/cron must be restricted to authorized users.
 
-- name: req-008.1 delete cron & at allow files
+- name: req-008.1 delete cron & at deny files
   file:
     path: "{{ item }}"
     state: absent
@@ -118,12 +130,13 @@
   when: config_cron
 
 - name: req-008.2 generate cron & at allow files
-  file:
-    path: "{{ item }}"
-    state: touch
+  copy:
+    content: ""
+    dest: "{{ item }}"
+    force: no
     owner: root
     group: root
-    mode:  "og-rwx"
+    mode:  0600
   with_items:
     - "/etc/cron.allow"
     - "/etc/at.allow"
@@ -199,28 +212,18 @@
 
 # Req 13:	Not needed SUID and SGID bits must be removed from executables.
 
-- name: req-013.1 remove suid/sgid bit from binaries in blacklist
-  file:
-    path: '{{ item }}'
-    mode: 'a-s'
-    state: 'file'
-    follow: 'yes'
-  with_items:
-    - "{{ suid_sgid_blacklist }}"
-  when: config_suid_sgid
-
-- name: req-013.2 find binaries with suid/sgid set
+- name: req-013.1 find binaries with suid/sgid set
   shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f \( -perm -4000 -o -perm -2000 \) -print 2>/dev/null
   register: sbit_binaries
   changed_when: false
   when: config_suid_sgid
 
-- name: req-013.3 combine found files with default whitelist
+- name: req-013.2 combine found files with default whitelist
   set_fact:
     suid: '{{ sbit_binaries.stdout_lines | difference(suid_sgid_whitelist) }}'
   when: config_suid_sgid
 
-- name: req-013.4 remove suid/sgid bit from all binaries except whitelists
+- name: req-013.3 remove suid/sgid bit from all binaries except whitelists
   file:
     path: '{{ item }}'
     mode: 'a-s'
@@ -344,8 +347,8 @@
 
 - name: req-022.2 disable login for system accounts
   shell: /usr/sbin/usermod -s {{ nologin_path }} {{ item }}
-  with_items: "{{check_sys_user.stdout_lines}}"
-  when: config_nologin_sys_accounts and check_sys_user.stdout != ""
+  with_items: "{{check_sys_accounts.stdout_lines}}"
+  when: config_nologin_sys_accounts and check_sys_accounts.stdout != ""
 
 # Req 23:	User accounts must be protected against unauthorized usage by at least
 # one authentication attribute.
@@ -368,7 +371,7 @@
 
 # Req 26:	Authentication must be used for single user mode.
 
-- name: req-26.1 check if root has a password set
+- name: req-026.1 check if root has a password set
   shell: grep "^root:[*\!]:" /etc/shadow
   register: check_root_pw
   changed_when: false

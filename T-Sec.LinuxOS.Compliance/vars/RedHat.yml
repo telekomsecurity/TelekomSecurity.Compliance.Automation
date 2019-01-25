@@ -16,12 +16,15 @@ grub_update_tool: "grub2-mkconfig -o /boot/grub2/grub.cfg"
 # Req 1: Unused services and protocols must be deactivated.
 rsync_deamon: 'rsyncd'
 
+# Req 2: The reachability of services must be restricted.
+iptables_tools: 'iptables-services'
+
 # Req 4:	Unused filesystems must be disabled.
 modprobe_package: 'module-init-tools'
 
 # Req 21:	User accounts must be used that allow unambiguous identification of
 # the user.
-uid_default: 999
+uid_max: 999
 nologin_path: /sbin/nologin
 
 # Req 32:	System time must be synchronized against a reference time source.
@@ -30,7 +33,8 @@ ntp_deamon: "chronyd"
 ntp_config_file: "chrony-config.j2"
 
 # Req 33:	Auditd service must be used to log security relevant events.
-audit_deamon: "audit"
+audit_software: "audit"
+audit_deamon: "auditd"
 audit_rules_file: "/etc/audit/audit.rules"
 
 # Req 34:	System events must be logged.
@@ -62,3 +66,7 @@ os_pam_cracklib: 'pam_cracklib'
 os_pamd_config_files:
   - "password-auth"
   - "system-auth"
+
+# Req 52:	If a system has Internet facing services or is a virtualization host,
+# a MAC solution must be used.
+mac_type: "selinux"

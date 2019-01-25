@@ -39,11 +39,8 @@
     state: present
     exclusive: true
     key: "{{ lookup('file', public_key_file) }}"
-  when: config_new_user and not ansible_check_mode
+  when: config_new_user
 
 # 01 ssh requirements
 - include_vars: vars_ssh(01)ssh-requirements.yml
-
-# hardening
 - import_tasks: hardening_ssh(01)ssh-requirements.yml
-  when: not ansible_check_mode

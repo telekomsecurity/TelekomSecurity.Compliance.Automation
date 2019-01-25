@@ -16,12 +16,15 @@ grub_update_tool: "update-grub"
 # Req 1: Unused services and protocols must be deactivated.
 rsync_deamon: 'rsync'
 
+# Req 2: The reachability of services must be restricted.
+iptables_tools: 'iptables-persistent'
+
 # Req 4:	Unused filesystems must be disabled.
 modprobe_package: 'kmod'
 
 # Req 21:	User accounts must be used that allow unambiguous identification of
 # the user.
-uid_default: 999
+uid_max: 999
 nologin_path: /usr/sbin/nologin
 
 
@@ -31,6 +34,7 @@ ntp_deamon: "ntp"
 ntp_config_file: "ntp-config.j2"
 
 # Req 33:	Auditd service must be used to log security relevant events.
+audit_software: "auditd"
 audit_deamon: "auditd"
 audit_rules_file: "/etc/audit/audit.rules"
 
@@ -66,3 +70,7 @@ os_specific_change_events:
 os_pam_cracklib: 'libpam-cracklib'
 os_pamd_config_files:
   - "common-password"
+
+# Req 52:	If a system has Internet facing services or is a virtualization host,
+# a MAC solution must be used.
+mac_type: "apparmor"

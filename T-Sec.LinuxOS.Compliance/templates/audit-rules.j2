@@ -50,4 +50,18 @@
 {% endfor %}
 {% endif %}
 
+# Configure MAC events
+{% if config_mac %}
+{% if config_selinux_logging %}
+{% for chg in selinux_logging_events %}
+{{chg}}
+{% endfor %}
+{% endif %}
+{% if config_apparmor_logging %}
+{% for chg in apparmor_logging_events %}
+{{chg}}
+{% endfor %}
+{% endif %}
+{% endif %}
+
 # Events for priviledged commands

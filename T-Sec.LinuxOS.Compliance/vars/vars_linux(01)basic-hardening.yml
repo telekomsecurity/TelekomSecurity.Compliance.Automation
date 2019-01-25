@@ -18,6 +18,10 @@ disable_rsync: true
 # Req 2: The reachability of services must be restricted.
 # Compliance check only.
 
+# TCP/UDP ports that should be allowed must be configured in file /default/main.yml
+# (vars: 'tcp_services', 'config_iptables_rules_tcp', 'udp_services',
+# 'config_iptables_rules_udp:')
+
 # Req 3: Unused software must not be installed or must be uninstalled.
 uninstall_servers: true
 servers:
@@ -94,32 +98,6 @@ umask: "027"
 
 # Req 13:	Not needed SUID and SGID bits must be removed from executables.
 config_suid_sgid: true
-suid_sgid_blacklist:
-  - '/bin/mount'
-  - '/bin/su'
-  - '/bin/umount'
-  - '/usr/bin/rcp'
-  - '/usr/bin/rlogin'
-  - '/usr/bin/rsh'
-  - '/usr/libexec/openssh/ssh-keysign'
-  - '/usr/lib/openssh/ssh-keysign'
-  - '/sbin/netreport'
-  - '/usr/sbin/usernetctl'
-  - '/usr/sbin/userisdnctl'
-  - '/usr/sbin/pppd'
-  - '/usr/bin/lockfile'
-  - '/usr/bin/mail-lock'
-  - '/usr/bin/mail-unlock'
-  - '/usr/bin/mail-touchlock'
-  - '/usr/bin/dotlockfile'
-  - '/usr/bin/arping'
-  - '/usr/sbin/uuidd'
-  - '/usr/bin/mtr'
-  - '/usr/lib/evolution/camel-lock-helper-1.2'
-  - '/usr/lib/pt_chown'
-  - '/usr/lib/eject/dmcrypt-get-device'
-  - '/usr/lib/mc/cons.saver'
-
 suid_sgid_whitelist:
   - '/bin/ping'
   - '/sbin/pam_timestamp_check'
@@ -155,9 +133,6 @@ suid_sgid_whitelist:
   - '/usr/sbin/postdrop'
   - '/usr/sbin/postqueue'
   - '/usr/sbin/suexec'
-  - '/usr/lib/squid/ncsa_auth'
-  - '/usr/lib/squid/pam_auth'
-  - '/usr/kerberos/bin/ksu'
   - '/usr/sbin/ccreds_validate'
   - '/usr/lib/dbus-1.0/dbus-daemon-launch-helper'
   - '/usr/lib/policykit-1/polkit-agent-helper-1'
@@ -312,7 +287,7 @@ config_single_user_mode: true
 #    for root. Disabling it (false) will skip complete requirement and your
 #    must set a complexe root password manualy.
 # ------------------------------------------------------------------------
-config_root_password: false
+config_root_password: true
 
 # Req 27: The management of the operating system must be done via a dedicated
 # management network which is independent from the production network.
