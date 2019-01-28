@@ -140,8 +140,7 @@ Additional variables are located in the following files in directory '/vars':
 
 -------------------------------------------------------------------------------
 
-Note: Changing variables in these files can affect security compliance and must
-      be approved by your responsible Project Security Manager!
+**NOTE:"" Changing variables in these files can affect security compliance and must be approved by your responsible Project Security Manager!
 
 -------------------------------------------------------------------------------
 
