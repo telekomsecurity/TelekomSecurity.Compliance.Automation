@@ -25,5 +25,10 @@ With automating of security hardening it is possible to reach a constant and rep
 
 **ANSIBLE:**
 
-  * [Linux OS for Servers](/T-Sec.LinuxOS.Compliance) - for SecReq 3.65: Linux OS for Servers
-  * [SSH](/T-Sec.SSH.Compliance) - for SecReq 3.04: Secure Shell (SSH)
+  * [SSH](/T-Sec.SSH.Compliance) (01)
+  * [Linux OS for Servers](/T-Sec.LinuxOS.Compliance) (02)
+
+## References
+
+  * 02. SecReq 3.04: Secure Shell
+  * 01. SecReq 3.65: Linux OS for Servers
