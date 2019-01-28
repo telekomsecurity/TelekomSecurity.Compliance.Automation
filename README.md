@@ -25,10 +25,11 @@ With automating of security hardening it is possible to reach a constant and rep
 
 **ANSIBLE:**
 
-  * [SSH](/T-Sec.SSH.Compliance) (01)
-  * [Linux OS for Servers](/T-Sec.LinuxOS.Compliance) (02)
+  1. [SSH](/T-Sec.SSH.Compliance)
+  2. [Linux OS for Servers](/T-Sec.LinuxOS.Compliance)
 
 ## References
 
-  * 02. SecReq 3.04: Secure Shell
-  * 01. SecReq 3.65: Linux OS for Servers
+Telekom Security - Security Requirements:
+  1. SecReq 3.04: Secure Shell
+  2. SecReq 3.65: Linux OS for Servers
