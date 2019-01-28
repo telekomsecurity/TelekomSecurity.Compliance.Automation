@@ -1,30 +1,31 @@
 # Meta: Telekom Security - Compliance Automation (SSH)
 
 galaxy_info:
-  author: Markus Schumburg
-  description: Telekom Security Linux OS Hardening
+  author: Telekom Security
+  description: T-Sec Compliance Automation for Linux OS for Servers
   company: T-Systems International GmbH
   license: Apache License, Version 2.0
 
-  min_ansible_version: 2.4.x
+  min_ansible_version: 2.7.x
   platforms:
     - name: Ubuntu
       versions:
         - trusty
         - xenial
+        - bionic
     - name: RHEL
       versions:
         - 7
     - name: CentOS
       versions:
         - 7
-    - name: AMI
-
+    - name: Amazon
+      versions:
+        - 2
   galaxy_tags:
     - security
     - hardening
     - compliance
     - linux
-    - ssh
 
   dependencies: []

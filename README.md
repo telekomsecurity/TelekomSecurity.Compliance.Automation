@@ -23,7 +23,7 @@ With automating of security hardening it is possible to reach a constant and rep
 
 ## Available Scripts
 
-**ANSIBLE:**
+**Ansible:**
 
   1. [SSH](/T-Sec.SSH.Compliance)
   2. [Linux OS for Servers](/T-Sec.LinuxOS.Compliance)
