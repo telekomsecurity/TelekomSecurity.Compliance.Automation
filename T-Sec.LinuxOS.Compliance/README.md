@@ -173,7 +173,35 @@ Telekom Security - Security Requirements:
 The following security requirements of the named document are not implemented in
 this version of the Ansible role:
 
->>>>> tbd
+* Req 5:	Dedicated partitions must be used for growing content that can influence the availability of the system.
+
+Note! Req 5 should be implemented during system installation!
+
+* Req 6:	Parameters nodev, nosuid and noexec must be set for partitions where this is applicable.
+* Req 20: GPG check for repository server must be activated and corresponding keys for trustable repositories must be configured.
+* Req 21:	User accounts must be used that allow unambiguous identification of
+the user.
+* Req 24:	User accounts with extensive rights must be protected with two authentication attributes.
+* Req 25:	The system must be connected to a central system for user administration.
+* Req 27: The management of the operating system must be done via a dedicated management network which is independent from the production network.
+* Req 29: Encrypted protocols must be used for management access to administrate
+the operating system.
+* Req 42:	If Syslog-NG is used, the default permission of 640 or more restrictive for logfiles must be configured.
+* Req 43:	If Syslog-NG is used, at least one central logging server must be
+configured.
+
+The following requirements are not included as they are regular compliance checks and not relevant for hardening:
+
+* Req 61:	No legacy + entries must exist in files passwd, shadows and group.
+* Req 62	A user's home directory must be owned by the user and have mode 750 or more restrictive.
+* Req 63:	Default group for the root account must be GID 0.
+* Req 64:	Root must be the only UID 0 account.
+* Req 65:	All groups in /etc/passwd must exist in /etc/group.
+* Req 66:	No duplicate UIDs and GIDs must exist.
+* Req 67:	No duplicate user and group names must exist.
+* Req 68: The shadow group must be empty (only Ubuntu Linux).
+* Req 69: No files and directories without assigned user or group must exist.
+* Req 70:	Permissions of security relevant configuration files must have the distribution default values or more restrictive.
 
 ## License
 
