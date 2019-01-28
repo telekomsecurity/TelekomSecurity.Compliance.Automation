@@ -105,16 +105,25 @@ of the systems you like to harden.
 
 | Name           | Default Value | Description                        |
 | -------------- | ------------- | -----------------------------------|
+| 'config_iptables_rules_tcp' | true | Defines if TCP iptables rules should be configured. |
+| 'tcp_services' | 22 | Defines needed TCP ports.|
+| 'config_iptables_rules_udp' | true | Defines if UDP iptables rules should be configured. |
+| 'tcp_services' | none | Defines needed UDP ports.|
+| 'config_partitions' | false | Defines if separate partitions are used. |
+| 'partitions' | tmp, var | Defines existing partitions. |
 | 'config_ipv6_enable' | false | Enables if IPv6 should be used. |
+| 'do_system_upgrade' | false | Defines if a system upgrade should be performed .|
 | 'config_mgmt_interface_ipv4' | false | Specifies if a dedicated IPv4 management interface is used. |
 | 'mgmt_interface_ipv4' | 0.0.0.0 | Defines IPv4 address of management interface. |
 | 'config_mgmt_interface_ipv6' | false | Enable if (true) a dedicated IPv6 management interface is used. |
 | 'mgmt_interface_ipv6' | :: | Defines IPv6 address for management interface. |
-| 'config_new_user' | false | Defines if a new user should be configured. |
-| 'user_name' | none | Defines name for new user. |
-| 'password' | none | Defines password for new user. |
-| 'public_key_file' | {{ role_path }}/files/id_rsa.pub |  Defines path to public-key file (e.g. id_rsa.pub). |
-| 'group_sudo' | sudo | Defines group used for sudo. |
+| 'config_ntp' | true | Defines if NTP should be configured. |
+| 'ntp_servers' | ntp-pool-info_ntpp10.telekom.de, ntp-pool-info_ntpp21.telekom.de | Defines addresses of NTP servers to use. |
+| 'set_timezone' | true | Defines if time zone should be configured. |
+| 'use_timezone' | Europe/Berlin | Defines time zone to use. |
+| 'config_syslog' | false |  Defines if Syslog should be configured. |
+| 'syslog_type' | rsyslog | Defines type of syslog to use. |
+| 'syslog_server' |  | Defines IP addresses of Syslog server(s) to use. |
 
 Additional variables are located in the following files in directory '/vars':
 

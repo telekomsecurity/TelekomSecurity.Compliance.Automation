@@ -2,7 +2,7 @@
 
 galaxy_info:
   author: Telekom Security
-  description: T-Sec Compliance Automation for Linux OS for Servers
+  description: T-Sec Compliance Automation for SSH
   company: T-Systems International GmbH
   license: Apache License, Version 2.0
 
@@ -27,5 +27,6 @@ galaxy_info:
     - hardening
     - compliance
     - linux
+    - ssh
 
   dependencies: []

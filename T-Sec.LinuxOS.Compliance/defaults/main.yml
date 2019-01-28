@@ -50,7 +50,7 @@ config_ipv6_enable: false
 # fixed or protected against misuse.
 
 # Enable (true) if Ansible should do an update to current patch level.
-do_system_upgrade: true
+do_system_upgrade: false
 
 # Req 27: The management of the operating system must be done via a dedicated
 # management network which is independent from the production network.
