@@ -206,4 +206,5 @@ The following requirements are not included as they are regular compliance check
 ## License
 
 Apache License, Version 2.0
+
 See file LICENSE
