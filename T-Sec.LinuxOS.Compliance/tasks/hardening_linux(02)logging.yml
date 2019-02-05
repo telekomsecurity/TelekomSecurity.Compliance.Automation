@@ -40,14 +40,7 @@
   changed_when: false
   when: config_ntp and set_timezone
 
-- name: req-032.3 change init.d/ntp file
-  lineinfile:
-    dest: '/etc/init.d/ntp'
-    regexp: '^RUNASUSER=(.*)'
-    line: 'RUNASUSER=ntp'
-  when: config_ntp and ansible_os_family == "Debian"
-
-- name: req-032.4 change ntp.conf
+- name: req-032.3 change ntp.conf
   template:
     src: '{{ ntp_config_file }}'
     dest: '/etc/{{ntp_software}}.conf'
@@ -57,12 +50,19 @@
   notify: restart ntp
   when: config_ntp
 
+- name: req-032.4 change init.d/ntp file
+  lineinfile:
+    dest: '/etc/init.d/ntp'
+    regexp: '^RUNASUSER=(.*)'
+    line: 'RUNASUSER=ntp'
+  when: config_ntp and ntp_software == "ntp"
+
 - name: req-032.5 change chronyd file
   lineinfile:
     dest: '/etc/sysconfig/chronyd'
     regexp: '^OPTIONS=(.*)'
     line: 'OPTIONS="-u chrony"'
-  when: config_ntp and ansible_os_family == "RedHat"
+  when: config_ntp and ntp_software == "chrony"
 
 # Req 33:	Auditd service must be used to log security relevant events.
 

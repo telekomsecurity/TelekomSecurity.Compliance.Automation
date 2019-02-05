@@ -29,9 +29,9 @@ nologin_path: /usr/sbin/nologin
 
 
 # Req 32:	System time must be synchronized against a reference time source.
-ntp_software: "ntp"
-ntp_deamon: "ntp"
-ntp_config_file: "ntp-config.j2"
+ntp_software: "chrony"
+ntp_deamon: "chrony"
+ntp_config_file: "chrony-config.j2"
 
 # Req 33:	Auditd service must be used to log security relevant events.
 audit_software: "auditd"
