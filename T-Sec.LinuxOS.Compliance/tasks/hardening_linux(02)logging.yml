@@ -10,7 +10,7 @@
 - name: req-030.1 enable logging before auditd starts
   lineinfile:
     path: '/etc/default/grub'
-    regexp: ^GRUB_CMDLINE_LINUX=(.*)"
+    regexp: "^GRUB_CMDLINE_LINUX=(.*)"
     line: GRUB_CMDLINE_LINUX="audit=1"
     state: present
   notify: update grub
