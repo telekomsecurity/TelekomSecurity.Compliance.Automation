@@ -48,7 +48,7 @@
   package:
     name: '{{ os_pam_cracklib }}'
     state: absent
-  when: config_pam_password_rules
+  when: config_pam_password_rules|bool
 
 - name: req-045.2 install 'libpam-pwquality' (Ubuntu)
   package:
@@ -66,7 +66,7 @@
       - retry=3
     state: args_present
   with_items: "{{ os_pamd_config_files }}"
-  when: config_pam_password_rules
+  when: config_pam_password_rules|bool
 
 - name: req-045.4 configure password rules
   template:
@@ -75,7 +75,7 @@
     owner: root
     group: root
     mode: 0644
-  when: config_pam_password_rules
+  when: config_pam_password_rules|bool
 
 # Req 46:	If PAM is used, a protection against brute force and dictionary attacks
 # that hinder pass-word guessing must be configured in PAM.

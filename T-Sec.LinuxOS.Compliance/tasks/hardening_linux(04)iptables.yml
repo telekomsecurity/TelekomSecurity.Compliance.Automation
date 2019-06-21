@@ -74,7 +74,7 @@
     ctstate: NEW
     jump: ACCEPT
   with_items: "{{ tcp_services }}"
-  when: config_iptables_rules_tcp
+  when: config_iptables_rules_tcp|bool
 
 - name: req-050.2 configure rules for udp
   iptables:
@@ -85,7 +85,7 @@
     ctstate: NEW
     jump: ACCEPT
   with_items: "{{ udp_services }}"
-  when: config_iptables_rules_udp
+  when: config_iptables_rules_udp|bool
 
 - name: req-050.3 configure rules for icmp (ping)
   iptables:
