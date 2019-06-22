@@ -65,3 +65,8 @@
 {% endif %}
 
 # Events for priviledged commands
+{% for cmd in priv_commands.stdout_lines %}
+-a always,exit -F path={{ cmd }} -F perm=x -F auid>=1000 -F auid!=4294967295 -k privileged
+{% endfor %}
+
+-e 2
