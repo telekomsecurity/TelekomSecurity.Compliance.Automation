@@ -91,7 +91,7 @@
   iptables:
     chain: INPUT
     protocol: icmp
-    icmp_type: 8
+    icmp_type: "8"
     match: state
     ctstate: NEW,ESTABLISHED,RELATED
     jump: ACCEPT
