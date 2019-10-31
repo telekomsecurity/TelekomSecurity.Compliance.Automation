@@ -29,6 +29,7 @@
       - "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
       - "{{ ansible_distribution }}.yml"
       skip: true
+  tags: grub
 
 # System update (as requested with Req 19) must be done before security
 # configuration. That's why relevante tasks are placed here!
@@ -47,11 +48,26 @@
     state: latest
   when: ansible_os_family == "RedHat" and do_system_upgrade
 
-- include_vars: vars_linux(01)basic-hardening.yml
-- include_vars: vars_linux(02)logging.yml
-- include_vars: vars_linux(03)pam.yml
-- include_vars: vars_linux(04)iptables.yml
-- include_vars: vars_linux(05)mac.yml
+# include variables 
+
+- name: include vars_linux(01)basic-hardening.yml
+  include_vars: vars_linux(01)basic-hardening.yml
+
+- name: include vars_linux(02)logging.yml
+  include_vars: vars_linux(02)logging.yml
+  tags: grub
+
+- name: include vars_linux(03)pam.yml
+  include_vars: vars_linux(03)pam.yml
+
+- name: include vars_linux(04)iptables.yml
+  include_vars: vars_linux(04)iptables.yml
+
+- name: include vars_linux(05)mac.yml
+  include_vars: vars_linux(05)mac.yml
+  tags: grub
+
+# import tasks 
 
 - import_tasks: hardening_linux(01)basic-hardening.yml
 - import_tasks: hardening_linux(02)logging.yml

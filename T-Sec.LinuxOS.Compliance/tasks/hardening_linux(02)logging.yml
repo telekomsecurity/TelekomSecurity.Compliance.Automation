@@ -9,12 +9,25 @@
 
 - name: req-030.1 enable logging before auditd starts
   lineinfile:
-    path: '/etc/default/grub'
-    regexp: ^GRUB_CMDLINE_LINUX=(.*)"
-    line: GRUB_CMDLINE_LINUX="audit=1"
     state: present
+    path: '/etc/default/grub'
+    backrefs: yes
+    regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT=(?!.*audit)\"[^\"]*)(\".*)'
+    line: '\1 audit=1\2'
   notify: update grub
   when: config_grub_logging
+  tags: grub
+
+- name: req-030.2 enable logging before auditd starts
+  lineinfile:
+    state: present
+    path: '/etc/default/grub'
+    backrefs: yes
+    regexp: '^(GRUB_CMDLINE_LINUX=(?!.*audit)\"[^\"]*)(\".*)'
+    line: '\1 audit=1\2'
+  notify: update grub
+  when: config_grub_logging
+  tags: grub
 
 # Req 31:	Log rotation for logfiles must be configured.
 

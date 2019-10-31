@@ -18,41 +18,58 @@
 
 - name: req-053.1 enable selinux in grub
   lineinfile:
-    dest: '/etc/default/grub'
-    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=(.*)'
-    line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"'
+    state: present
+    path: '/etc/default/grub'
+    backrefs: yes
+    regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT=(?!.*selinux)\"[^\"]*)(\".*)'
+    line: '\1 selinux=1\2'
   notify: update grub
-  when: mac_type == "selinux" and
-      ( config_mac and config_selinux_grub )
+  when: mac_type == "selinux" and ( config_mac and config_selinux_grub )
+  tags: grub
 
 - name: req-053.2 enable selinux in grub
   lineinfile:
-    dest: '/etc/default/grub'
-    regexp: '^GRUB_CMDLINE_LINUX=(.*)'
-    line: 'GRUB_CMDLINE_LINUX=""'
+    state: present
+    path: '/etc/default/grub'
+    backrefs: yes
+    regexp: '^(GRUB_CMDLINE_LINUX=(?!.*selinux)\"[^\"]*)(\".*)'
+    line: '\1 selinux=1\2'
   notify: update grub
-  when: mac_type == "selinux" and
-      ( config_mac and config_selinux_grub )
+  when: mac_type == "selinux" and ( config_mac and config_selinux_grub )
+  tags: grub
 
 # Req 54:	If SELinux is used, its state must be enforced.
 
 - name: req-054.1 enforce selinux state
   lineinfile:
-    dest: '/etc/selinux/config'
-    regexp: '^SELINUX=(.*)'
-    line: 'SELINUX=enforcing'
-  when: mac_type == "selinux" and
-      ( config_mac and config_selinux_enforced )
+    state: present
+    path: '/etc/default/grub'
+    backrefs: yes
+    regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT=(?!.*enforcing)\"[^\"]*)(\".*)'
+    line: '\1 enforcing=1\2'
+  notify: update grub
+  when: mac_type == "selinux" and ( config_mac and config_selinux_enforced )
+  tags: grub
+
+- name: req-054.2 enforce selinux state
+  lineinfile:
+    state: present
+    path: '/etc/default/grub'
+    backrefs: yes
+    regexp: '^(GRUB_CMDLINE_LINUX=(?!.*enforcing)\"[^\"]*)(\".*)'
+    line: '\1 enforcing=1\2'
+  notify: update grub
+  when: mac_type == "selinux" and ( config_mac and config_selinux_enforced )
+  tags: grub
 
 # Req 55:	If SELinux is used, the policy must be configured.
 
 - name: req-055.1 configure selinux policy
   lineinfile:
-    dest: '/etc/selinux/config'
+    path: '/etc/selinux/config'
     regexp: '^SELINUXTYPE=(.*)'
     line: 'SELINUXTYPE=targeted'
-  when: mac_type == "selinux" and
-      ( config_mac and config_selinux_policy )
+  when: mac_type == "selinux" and ( config_mac and config_selinux_policy )
 
 # Req 56:	If SELinux is used, SETroubleshoot and MCS Translation Service must
 # not be installed.
@@ -62,8 +79,7 @@
     name: '{{ item }}'
     state: absent
   with_items: "{{ selinux_uninstall_tools }}"
-  when: mac_type == "selinux" and
-      ( config_mac and config_selinux_uninstall_tools )
+  when: mac_type == "selinux" and ( config_mac and config_selinux_uninstall_tools )
 
 # Req 57:	If SELinux is used, events must be logged if configuration of SELinux
 # is modified.
@@ -74,21 +90,25 @@
 
 - name: req-058.1 enable apparmor in grub
   lineinfile:
-    dest: '/etc/default/grub'
-    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=(.*)'
-    line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"'
+    state: present
+    path: /etc/default/grub
+    backrefs: yes
+    regexp: '^(GRUB_CMDLINE_LINUX_DEFAULT=(?!.*apparmor)\"[^\"]*)(\".*)'
+    line: '\1 apparmor=1\2'
   notify: update grub
-  when: mac_type == "apparmor" and
-      ( config_mac and config_apparmor_grub )
+  when: mac_type == "apparmor" and ( config_mac and config_apparmor_grub )
+  tags: grub
 
 - name: req-058.2 enable apparmor in grub
   lineinfile:
-    dest: '/etc/default/grub'
-    regexp: '^GRUB_CMDLINE_LINUX=(.*)'
-    line: 'GRUB_CMDLINE_LINUX=""'
+    state: present
+    path: /etc/default/grub
+    backrefs: yes
+    regexp: '^(GRUB_CMDLINE_LINUX=(?!.*apparmor)\"[^\"]*)(\".*)'
+    line: '\1 apparmor=1\2'
   notify: update grub
-  when: mac_type == "apparmor" and
-      ( config_mac and config_apparmor_grub )
+  when: mac_type == "apparmor" and ( config_mac and config_apparmor_grub )
+  tags: grub
 
 # Req 59:	AppArmor is used, its state must be enforced.
 
@@ -96,14 +116,12 @@
   package:
     name: 'apparmor-utils'
     state: present
-  when: mac_type == "apparmor" and
-      ( config_mac and config_apparmor_enforced )
+  when: mac_type == "apparmor" and ( config_mac and config_apparmor_enforced )
 
 - name: req-048.2 enforce apparmor profiles
   shell: aa-enforce /etc/apparmor.d/usr* >/dev/null 2>&1
   changed_when: false
-  when: mac_type == "apparmor" and
-      ( config_mac and config_apparmor_enforced )
+  when: mac_type == "apparmor" and ( config_mac and config_apparmor_enforced )
 
 # Req 60:	If AppArmor is used, events must be logged if configuration of AppArmor
 # is modified.
