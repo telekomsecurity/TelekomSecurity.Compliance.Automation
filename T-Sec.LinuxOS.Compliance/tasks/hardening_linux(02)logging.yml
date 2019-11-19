@@ -26,8 +26,7 @@
     regexp: '^(GRUB_CMDLINE_LINUX=(?!.*audit)\"[^\"]*)(\".*)'
     line: '\1 audit=1\2'
   notify: update grub
-  when: config_grub_logging
-  tags: grub
+  when: config_grub_logging|bool
 
 # Req 31:	Log rotation for logfiles must be configured.
 
@@ -38,7 +37,7 @@
     owner: root
     group: root
     mode: 0644
-  when: config_log_rotate
+  when: config_log_rotate|bool
 
 # Req 32:	System time must be synchronized against a reference time source.
 
@@ -46,7 +45,7 @@
   package:
     name: "{{ ntp_software }}"
     state: present
-  when: config_ntp
+  when: config_ntp|bool
 
 - name: req-032.2 set time zone
   command: timedatectl set-timezone {{ use_timezone }}
@@ -61,7 +60,7 @@
     group: root
     mode: 0644
   notify: restart ntp
-  when: config_ntp
+  when: config_ntp|bool
 
 - name: req-032.4 change init.d/ntp file
   lineinfile:
@@ -83,7 +82,7 @@
   package:
     name: '{{ audit_software }}'
     state: present
-  when: config_auditd
+  when: config_auditd|bool
 
 - name: req-033.3 check max size for log rotate in auditd.conf
   lineinfile:
@@ -125,7 +124,7 @@
     mode: 0640
     backup: yes
   notify: restart auditd
-  when: config_auditd
+  when: config_auditd|bool
 
 - name: req-035.2 search for privileged commands
   shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f \( -perm -4000 -o -perm -2000 \) -print 2>/dev/null
@@ -160,7 +159,7 @@
   package:
     name: '{{ syslog_type }}'
     state: present
-  when: config_syslog
+  when: config_syslog|bool
 
 # Req 40:	If RSyslog is used, the default permission of 640 or more restrictive
 # for logfiles must be configured.

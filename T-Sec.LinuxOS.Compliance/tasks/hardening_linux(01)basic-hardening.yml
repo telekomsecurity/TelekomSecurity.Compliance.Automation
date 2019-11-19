@@ -70,14 +70,14 @@
     name: '{{ item }}'
     state: absent
   with_items: '{{ servers }}'
-  when: uninstall_servers
+  when: uninstall_servers|bool
 
 - name: req-003.2 uninstall clients
   package:
     name: '{{ item }}'
     state: absent
   with_items: '{{ clients }}'
-  when: uninstall_clients
+  when: uninstall_clients|bool
 
 # Req 4:	Unused filesystems must be disabled.
 
@@ -85,7 +85,7 @@
   package:
     name: '{{ modprobe_package }}'
     state: present
-  when: disable_filesystems
+  when: disable_filesystems|bool
 
 - name: req-004.2 disable unused filesystems
   template:
@@ -94,7 +94,7 @@
     owner: root
     group: root
     mode: 0640
-  when: disable_filesystems
+  when: disable_filesystems|bool
 
 - name: req-004.3 check loaded kernel modules
   modprobe:
@@ -102,7 +102,7 @@
     state: absent
   with_items:
     - "{{ filesystems }}"
-  when: disable_filesystems
+  when: disable_filesystems|bool
 
 # Req 5:	Dedicated partitions must be used for growing content that can
 # influence the availability of the system.
@@ -116,7 +116,7 @@
   package:
     name: 'autofs'
     state: absent
-  when: uninstall_autofs
+  when: uninstall_autofs|bool
 
 # Req 8: The use of at/cron must be restricted to authorized users.
 
@@ -127,7 +127,7 @@
   with_items:
     - "/etc/cron.deny"
     - "/etc/at.deny"
-  when: config_cron
+  when: config_cron|bool
 
 - name: req-008.2 generate cron & at allow files
   copy:
@@ -140,7 +140,7 @@
   with_items:
     - "/etc/cron.allow"
     - "/etc/at.allow"
-  when: config_cron
+  when: config_cron|bool
 
 # Req 9: Sticky bit must be set on all world-writable directories.
 
@@ -148,7 +148,7 @@
   shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type d -perm -0002 \! -perm -1000 2>/dev/null
   register: check_directories
   changed_when: false
-  when: config_worldwritable_directories
+  when: config_worldwritable_directories|bool
 
 - name: req-009.2 set sticky bit for world-writable directories
   file:
@@ -181,7 +181,7 @@
     state: present
     regexp: '^ENCRYPT_METHOD*'
     line: 'ENCRYPT_METHOD SHA512'
-  when: config_sha512
+  when: config_sha512|bool
 
 - name: req-011.2 set max rounds for sha-512
   lineinfile:
@@ -189,7 +189,7 @@
     state: present
     regexp: '^SHA_CRYPT_MAX_ROUNDS*'
     line: 'SHA_CRYPT_MAX_ROUNDS {{ sha512_rounds_max }}'
-  when: config_sha512
+  when: config_sha512|bool
 
 - name: req-011.3 set min rounds for sha-512
   lineinfile:
@@ -198,7 +198,7 @@
     regexp: '^SHA_CRYPT_MIN_ROUNDS*'
     insertafter: '^ENCRYPT_METHOD SHA512'
     line: 'SHA_CRYPT_MIN_ROUNDS {{ sha512_rounds_min }}'
-  when: config_sha512
+  when: config_sha512|bool
 
 # Req 12: The default user umask must be 027 or more restrictive.
 
@@ -208,7 +208,7 @@
     line: 'UMASK {{ umask }}'
     regexp: '^UMASK'
     state: present
-  when: config_umask
+  when: config_umask|bool
 
 # Req 13:	Not needed SUID and SGID bits must be removed from executables.
 
@@ -216,12 +216,12 @@
   shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f \( -perm -4000 -o -perm -2000 \) -print 2>/dev/null
   register: sbit_binaries
   changed_when: false
-  when: config_suid_sgid
+  when: config_suid_sgid|bool
 
 - name: req-013.2 combine found files with default whitelist
   set_fact:
     suid: '{{ sbit_binaries.stdout_lines | difference(suid_sgid_whitelist) }}'
-  when: config_suid_sgid
+  when: config_suid_sgid|bool
 
 - name: req-013.3 remove suid/sgid bit from all binaries except whitelists
   file:
@@ -231,7 +231,7 @@
     follow: 'yes'
   with_items:
     - "{{ suid }}"
-  when: config_suid_sgid
+  when: config_suid_sgid|bool
 
 # Req 14:	Core dumps must be disabled.
 
@@ -242,7 +242,7 @@
     owner: root
     group: root
     mode: 0755
-  when: config_coredumps
+  when: config_coredumps|bool
 
 - name: req-014.2 create file limits.conf
   template:
@@ -251,7 +251,7 @@
     owner: root
     group: root
     mode: 0440
-  when: config_coredumps
+  when: config_coredumps|bool
 
 - name: reg-014.3 check sysctl-settings for coredumps
   sysctl:
@@ -261,7 +261,7 @@
     state: present
     reload: yes
   with_dict: '{{ coredumps }}'
-  when: config_coredumps
+  when: config_coredumps|bool
 
 # Req 15:	Protection against buffer overflows must be enabled.
 
@@ -270,7 +270,7 @@
   register: check_nx
   failed_when: check_nx.stdout != "active"
   changed_when: false
-  when: config_buffer_overflow_protection
+  when: config_buffer_overflow_protection|bool
 
 - name: reg-015.2 check sysctl-settings for buffer overflow protection
   sysctl:
@@ -280,7 +280,7 @@
     state: present
     reload: yes
   with_dict: '{{ buffer_overflow_protection }}'
-  when: config_buffer_overflow_protection
+  when: config_buffer_overflow_protection|bool
 
 # Req 16:	Prelink must not be used.
 
@@ -300,7 +300,7 @@
     state: present
     reload: yes
   with_dict: '{{ network_config_ipv4 }}'
-  when: config_network_ipv4
+  when: config_network_ipv4|bool
 
 # Req 18:	IPv6 protocol stack must be securely configured.
 
@@ -343,7 +343,7 @@
   shell: awk -F':' '($1!="root" && $1!="sync" && $1!="shutdown" && $1!="halt" && $3<{{ uid_max }} && $7=="/bin/bash") {print $1}' /etc/passwd
   register: check_sys_accounts
   changed_when: false
-  when: config_nologin_sys_accounts
+  when: config_nologin_sys_accounts|bool
 
 - name: req-022.2 disable login for system accounts
   shell: /usr/sbin/usermod -s {{ nologin_path }} {{ item }}
@@ -357,7 +357,7 @@
   shell: awk -F":" '($2 == "" && $2 != "!" && $2 !="*") {print $1}' /etc/shadow
   register: user_without_pw
   changed_when: false
-  when: config_user_without_pw
+  when: config_user_without_pw|bool
 
 - name: req-023.2 lock accounts without password
   shell: passwd -l "{{ item }}"

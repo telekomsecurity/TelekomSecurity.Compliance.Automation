@@ -12,7 +12,7 @@
   package:
     name: '{{ mac_software }}'
     state: present
-  when: install_mac
+  when: install_mac|bool
 
 # Req 53:	If SELinux is used, it must not be disabled in bootloader configuration.
 
