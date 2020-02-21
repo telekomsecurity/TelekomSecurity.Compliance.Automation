@@ -76,7 +76,7 @@ ignore_rhosts: true
 
 # Req 14:	SSH HostbasedAuthentication must be disabled.
 host_based_auth: false
-ignore_known_hosts: tru
+ignore_known_hosts: true
 
 # Req 15:	The usage of the SSH service must be restricted to dedicated groups
 # or users.
