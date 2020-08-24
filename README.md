@@ -1,6 +1,8 @@
 <a href="images/tsec-logo.png"><img align="right" src="images/tsec-logo.png" alt="Telekom Security" height="80" width="80"></a>
+
 # move notice
-This repository is outdated and the development has move to https://github.com/telekom/tel-it-security-automation. Therefore this repo has been archived. 
+
+This repository is outdated and the development has moved to https://github.com/telekom/tel-it-security-automation. Therefore this repo has been archived. 
 
 -------------------------------------------------------------------------------
 
