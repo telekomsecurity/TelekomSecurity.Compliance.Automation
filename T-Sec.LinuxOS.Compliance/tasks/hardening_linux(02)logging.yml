@@ -115,6 +115,12 @@
 # Req 36:	Account and Group Management events must be logged.
 # Req 37:	Configuration Change events must be logged.
 
+- name: req-035.2 search for privileged commands
+  shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f \( -perm -4000 -o -perm -2000 \) -print 2>/dev/null
+  register: priv_commands
+  changed_when: false
+  when: config_auditd and config_access_events
+
 - name: req-034-37.1 configure logging events
   template:
     src: 'audit-rules.j2'
@@ -125,32 +131,6 @@
     backup: yes
   notify: restart auditd
   when: config_auditd|bool
-
-- name: req-035.2 search for privileged commands
-  shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type f \( -perm -4000 -o -perm -2000 \) -print 2>/dev/null
-  register: priv_commands
-  changed_when: false
-  when: config_auditd and config_access_events
-
-- name: req-035.3 configure logging for priviledged commands
-  lineinfile:
-    path: "{{ audit_rules_file }}"
-    insertafter: EOF
-    line: '-a always,exit -F path={{ item }} -F perm=x -F auid>=1000 -F auid!=4294967295 -k privileged'
-    state: present
-  with_items: '{{ priv_commands.stdout_lines }}'
-  notify: restart auditd
-  when: config_auditd and config_access_events
-
-# Req 38:	Auditd configuration must be immutable.
-
-- name: req-038.1 make audit configuration immutable
-  lineinfile:
-    path: "{{ audit_rules_file }}"
-    insertafter: EOF
-    line: '-e 2'
-    state: present
-  when: config_auditd and config_auditd_immutable
 
 # Req 39:	Security relevant logging data must be send to an external system direct
 # after their creation.
